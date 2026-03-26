@@ -774,9 +774,15 @@ function saveR(){
       return r;
     });
   } else {
-    RECORDS.push({id:Date.now(),qt:QT,name:name,mob:mob,prod:prod,qdesc:qdesc,st:'Pending',enteredBy:CU.name,createdAt:Date.now(),closeDesc:'',closedBy:'',closeDate:null});
+    var newRec={id:Date.now(),qt:QT,name:name,mob:mob,prod:prod,qdesc:qdesc,st:'Pending',enteredBy:CU.name,createdAt:Date.now(),closeDesc:'',closedBy:'',closeDate:null};
+    if(db){
+      fbSaveRecord(newRec);
+    } else {
+      RECORDS.push(newRec);
+      updPF();updStats();render();
+    }
   }
-  closeD();updPF();updStats();render();
+  closeD();
 }
 
 // ══════════════════════════════════════════════
