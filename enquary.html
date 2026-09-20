@@ -590,6 +590,20 @@ function hide(dId,oId){document.getElementById(dId).classList.remove('open');doc
 // ══════════════════════════════════════════════
 //  LOGIN / LOGOUT
 // ══════════════════════════════════════════════
+function resetToLoginState(){
+  CU=null;VIEW_ONLY=false;
+  document.getElementById('app-screen').classList.remove('active');
+  document.getElementById('login-screen').classList.add('active');
+  document.getElementById('lg-user').value='';
+  document.getElementById('lg-pass').value='';
+  document.getElementById('lg-err').textContent='';
+  var banner=document.getElementById('viewonly-banner');
+  if(banner)banner.style.display='none';
+  var badge=document.getElementById('tb-role-badge');
+  if(badge){badge.textContent='';badge.className='tb-pill';badge.style='';}
+  var fbb=document.getElementById('tb-fb-btn');if(fbb)fbb.style.display='none';
+  if(document.getElementById('fab-add'))document.getElementById('fab-add').style.display='flex';
+}
 function doLogin(){
   var u=document.getElementById('lg-user').value.trim();
   var p=document.getElementById('lg-pass').value;
@@ -608,27 +622,10 @@ function doLogin(){
   if(fbb&&isAdmin())fbb.style.display='flex';
 }
 function doLogout(){
-  CU=null;VIEW_ONLY=false;
-  document.getElementById('app-screen').classList.remove('active');
-  document.getElementById('login-screen').classList.add('active');
-  document.getElementById('lg-user').value='';
-  document.getElementById('lg-pass').value='';
-  document.getElementById('lg-err').textContent='';
-  var banner=document.getElementById('viewonly-banner');
-  if(banner)banner.style.display='none';
-  document.getElementById('tb-role-badge').style='';
-  var fbb=document.getElementById('tb-fb-btn');if(fbb)fbb.style.display='none';
+  resetToLoginState();
 }
 function backToLogin(){
-  CU=null;VIEW_ONLY=false;
-  document.getElementById('app-screen').classList.remove('active');
-  document.getElementById('login-screen').classList.add('active');
-  document.getElementById('lg-user').value='';
-  document.getElementById('lg-pass').value='';
-  document.getElementById('lg-err').textContent='';
-  var banner=document.getElementById('viewonly-banner');
-  if(banner)banner.style.display='none';
-  document.getElementById('tb-role-badge').style='';
+  resetToLoginState();
 }
 function doViewOnly(){
   CU=null;
@@ -648,6 +645,9 @@ function doViewOnly(){
   switchTab('queries');
   render();
 }
+window.addEventListener('DOMContentLoaded', function(){
+  resetToLoginState();
+});
 document.getElementById('lg-pass').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
 
 // ══════════════════════════════════════════════
