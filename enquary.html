@@ -498,7 +498,7 @@ body{font-family:'DM Sans',sans-serif;background:linear-gradient(180deg,#f5f1eb 
           <div class="field"><label>Total Amount (₹)</label><input id="jc-total" type="number" readonly/></div>
         </div></div>
         <div id="job-feedback"></div>
-        <div class="job-actions"><button class="btn-p btn-save" onclick="saveJobCard()">Save Job Card</button><button class="btn-p" style="background:#25D366;color:#fff" onclick="sendJobCard()">PDF + WhatsApp</button></div>
+        <div class="job-actions"><button class="btn-p btn-save" id="job-save-btn" onclick="saveJobCard()">Save Job Card</button><button class="btn-p" style="background:#25D366;color:#fff" onclick="sendJobCard()">PDF + WhatsApp</button></div>
       </div>
     </div>
   </div>
@@ -778,6 +778,15 @@ function renderJobRecords(){
 }
 function jobField(id){return document.getElementById(id).value.trim();}
 function setJobField(id,value){document.getElementById(id).value=value||'';}
+function setJobCardEditState(saved){
+  var canEdit=!saved||isAdmin();
+  ['jc-customer','jc-jobno','jc-date','jc-address','jc-tech','jc-brand','jc-model','jc-serial','jc-complaint','jc-action','jc-parts','jc-remarks','jc-service','jc-partsamt'].forEach(function(id){
+    var field=document.getElementById(id);if(field)field.disabled=!canEdit;
+  });
+  document.getElementById('jc-tech').readOnly=!isAdmin();
+  var saveBtn=document.getElementById('job-save-btn');
+  if(saveBtn){saveBtn.style.display=canEdit?'block':'none';saveBtn.textContent=saved?'Update Job Card':'Save Job Card';}
+}
 function openNewServiceJob(){
   if(VIEW_ONLY){alert('View Only mode cannot create a new entry.');return;}
   switchTab('queries');openD();pickQt('Service');
@@ -813,7 +822,7 @@ function loadJobCard(){
   setJobField('jc-address',j.address);setJobField('jc-tech',j.technician||(CU?CU.name:''));
   setJobField('jc-brand',j.brand);setJobField('jc-model',j.model);setJobField('jc-serial',j.serial);
   setJobField('jc-complaint',j.complaint||r.qdesc);setJobField('jc-action',j.action);setJobField('jc-parts',j.parts);setJobField('jc-remarks',j.remarks);
-  setJobField('jc-service',j.serviceCharge);setJobField('jc-partsamt',j.partsAmount);updateJobTotal();renderJobFeedback(r);
+  setJobField('jc-service',j.serviceCharge);setJobField('jc-partsamt',j.partsAmount);updateJobTotal();renderJobFeedback(r);setJobCardEditState(!!r.jobCard);
 }
 function updateJobTotal(){
   var service=Number(document.getElementById('jc-service').value)||0;
@@ -847,7 +856,8 @@ function jobPdf(r){
   doc.setDrawColor(220,217,210);doc.line(14,y,196,y);y+=9;doc.setFontSize(10);doc.setTextColor(100,95,88);doc.text('Service Charge',120,y);doc.text('Rs. '+(j.serviceCharge||'0'),196,y,{align:'right'});y+=7;doc.text('Parts Amount',120,y);doc.text('Rs. '+(j.partsAmount||'0'),196,y,{align:'right'});y+=8;doc.setTextColor(27,67,50);doc.setFontSize(12);doc.text('TOTAL AMOUNT',120,y);doc.text('Rs. '+(j.total||'0.00'),196,y,{align:'right'});y+=15;doc.setFontSize(9);doc.setTextColor(100,95,88);doc.text('Thank you for trusting Eldorado. Your feedback helps us improve.',14,y);return doc;
 }
 function sendJobCard(){
-  var r=saveJobCard();if(!r)return;var doc=jobPdf(r);if(!doc)return;
+  var id=Number(document.getElementById('job-record').value),existing=RECORDS.find(function(x){return x.id===id;}),r=existing&&existing.jobCard?existing:saveJobCard();
+  if(!r)return;var doc=jobPdf(r);if(!doc)return;
   var blob=doc.output('blob'),file=new File([blob],'service-job-card-'+(r.jobCard.jobNo||r.id)+'.pdf',{type:'application/pdf'}),text='Dear '+r.name+', your Eldorado service job card is attached. Please share your feedback here: '+feedbackUrl(r.id);
   if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){navigator.share({files:[file],title:'Eldorado Service Job Card',text:text}).catch(function(){});return;}
   doc.save('service-job-card-'+(r.jobCard.jobNo||r.id)+'.pdf');window.open('https://web.whatsapp.com/send?phone='+encodeURIComponent(r.mob.replace(/\D/g,''))+'&text='+encodeURIComponent(text),'_blank');
