@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono&display=swap" rel="stylesheet"/>
 <!-- html2canvas for card screenshot -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
@@ -289,6 +290,25 @@ body{font-family:'DM Sans',sans-serif;background:linear-gradient(180deg,#f5f1eb 
 .btn-save{background:var(--accent);color:#fff}
 .btn-cc{background:var(--closed);color:#fff}
 .btn-sec{width:100%;padding:12px;background:none;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text2);cursor:pointer;margin-top:9px}
+.job-tab-wrap{padding:14px}
+.job-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.job-title{font-size:16px;font-weight:800;color:var(--text)}
+.job-sub{font-size:12px;color:var(--text2);margin-top:3px}
+.job-new-btn{border:1px solid var(--accent);border-radius:10px;background:var(--accent);color:#fff;padding:9px 12px;font:700 12px 'DM Sans',sans-serif;cursor:pointer;white-space:nowrap}
+.job-select{display:none}
+.job-summary{background:linear-gradient(135deg,#eef7f1,#f8f6f3);border:1px solid #cfe4d5;border-radius:var(--radius-sm);padding:12px;margin-bottom:12px}
+.job-summary strong{font-size:14px}.job-summary span{font-size:12px;color:var(--text2);display:block;margin-top:3px}
+.job-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:10px}
+.job-section-title{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--accent);font-weight:800;margin-bottom:12px}
+.job-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.job-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.job-actions .btn-p{font-size:13px;padding:12px}
+.feedback-box{border:1px solid #cfe4d5;background:#f3fbf5;border-radius:var(--radius-sm);padding:12px;margin-top:10px}
+.feedback-rating{font-size:22px;letter-spacing:4px;color:#d48a16;margin-top:5px}
+.feedback-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:linear-gradient(135deg,#e8f2eb,#f7f3ed)}
+.feedback-card{width:min(460px,100%);background:#fff;border:1px solid var(--border);border-radius:20px;padding:24px;box-shadow:var(--shadow-lg)}
+.feedback-brand{font-size:12px;color:var(--accent);font-weight:800;letter-spacing:1.3px;text-transform:uppercase}.feedback-card h1{font-size:25px;letter-spacing:-.04em;margin:8px 0 6px}.feedback-card p{font-size:13px;color:var(--text2);line-height:1.5}.rating-pick{display:flex;gap:7px;margin:18px 0 12px}.rating-pick button{flex:1;border:1px solid var(--border);background:#fff;border-radius:10px;padding:10px 4px;font-size:19px;cursor:pointer;color:#c4beb3}.rating-pick button.selected{background:#fff5dc;border-color:#e4b95c;color:#d48a16}.feedback-thanks{text-align:center;padding:24px 0}.feedback-thanks strong{display:block;font-size:18px;margin:8px 0 4px}
+@media(max-width:480px){.job-grid{grid-template-columns:1fr}.job-actions{grid-template-columns:1fr}}
 
 @media (max-width:760px){
   .login-shell{grid-template-columns:1fr}
@@ -355,6 +375,22 @@ body{font-family:'DM Sans',sans-serif;background:linear-gradient(180deg,#f5f1eb 
   </div>
 </div>
 
+<!-- ══════════ CUSTOMER FEEDBACK SCREEN ══════════ -->
+<div id="feedback-screen" class="feedback-screen" style="display:none">
+  <div class="feedback-card">
+    <div class="feedback-brand">ELDORADO · Service Feedback</div>
+    <h1 id="feedback-title">How was your service?</h1>
+    <p id="feedback-subtitle">Your feedback helps us improve. Please rate the service received for this job.</p>
+    <div id="feedback-form">
+      <div class="rating-pick" id="rating-pick"><button type="button" data-rating="1">★</button><button type="button" data-rating="2">★</button><button type="button" data-rating="3">★</button><button type="button" data-rating="4">★</button><button type="button" data-rating="5">★</button></div>
+      <div class="field"><label>Suggestions / Comments</label><textarea id="feedback-comment" placeholder="Tell us about your experience"></textarea></div>
+      <div class="err-msg" id="feedback-error"></div>
+      <button class="btn-p btn-save" onclick="submitFeedback()">Submit Feedback</button>
+    </div>
+    <div id="feedback-thanks" class="feedback-thanks" style="display:none"><div style="font-size:34px">✓</div><strong>Thank you for your feedback</strong><p>Your response has been saved with your service job.</p></div>
+  </div>
+</div>
+
 <!-- ══════════ APP SCREEN ══════════ -->
 <div id="app-screen" class="screen">
 
@@ -381,6 +417,7 @@ body{font-family:'DM Sans',sans-serif;background:linear-gradient(180deg,#f5f1eb 
   <!-- TABS -->
   <div class="tab-bar">
     <button class="tab-btn active" id="tab-queries" onclick="switchTab('queries')">📋 Queries</button>
+    <button class="tab-btn" id="tab-job" onclick="switchTab('job')">🧾 Job Card</button>
     <button class="tab-btn" id="tab-emp" onclick="switchTab('emp')">👥 Employees</button>
   </div>
 
@@ -430,6 +467,40 @@ body{font-family:'DM Sans',sans-serif;background:linear-gradient(180deg,#f5f1eb 
     </div>
     <div class="list-header"><span class="list-lbl" id="list-lbl">All records</span></div>
     <div class="record-list" id="rl"></div>
+  </div>
+
+  <!-- SERVICE JOB CARD TAB -->
+  <div id="job-tab" style="display:none">
+    <div class="job-tab-wrap">
+      <div class="job-head"><div><div class="job-title">Service Job Card</div><div class="job-sub">Complete the service sheet and send it to your customer.</div></div><div style="display:flex;align-items:center;gap:7px"><span class="badge b-service">🔧 Service</span><button class="job-new-btn" onclick="openNewServiceJob()">＋ New Entry</button></div></div>
+      <select class="job-select" id="job-record" onchange="loadJobCard()"><option value="">Select a service job…</option></select>
+      <div id="job-empty" class="empty-state" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm)"><div class="empty-title">Select a Service query</div><div class="empty-sub">The completed card and customer feedback will stay attached to that job.</div></div>
+      <div id="job-form" style="display:none">
+        <div class="job-section"><div class="job-section-title">Customer &amp; product</div><div class="job-grid">
+          <div class="field"><label>Customer Name</label><input id="jc-customer" type="text" placeholder="Customer name"/></div>
+          <div class="field"><label>Job No.</label><input id="jc-jobno" type="text" placeholder="e.g. SER-2026-001"/></div>
+          <div class="field"><label>Date</label><input id="jc-date" type="date"/></div>
+          <div class="field"><label>Address</label><input id="jc-address" type="text" placeholder="Customer address"/></div>
+          <div class="field"><label>Technician Name</label><input id="jc-tech" type="text" placeholder="Technician" readonly/></div>
+          <div class="field"><label>Brand</label><input id="jc-brand" type="text" placeholder="e.g. HP, Dell"/></div>
+          <div class="field"><label>Model No.</label><input id="jc-model" type="text" placeholder="Model number"/></div>
+          <div class="field"><label>Serial No.</label><input id="jc-serial" type="text" placeholder="Serial number"/></div>
+        </div></div>
+        <div class="job-section"><div class="job-section-title">Complaint &amp; service details</div>
+          <div class="field"><label>Complaint / Issue Reported</label><textarea id="jc-complaint" placeholder="What issue did the customer report?"></textarea></div>
+          <div class="field"><label>Service Details &amp; Action Taken</label><textarea id="jc-action" placeholder="Work completed, testing and handover details"></textarea></div>
+          <div class="field"><label>Parts Replaced</label><textarea id="jc-parts" placeholder="List parts replaced, or write None"></textarea></div>
+          <div class="field"><label>Remarks</label><textarea id="jc-remarks" placeholder="Additional remarks or warranty notes"></textarea></div>
+        </div>
+        <div class="job-section"><div class="job-section-title">Billing statement</div><div class="job-grid">
+          <div class="field"><label>Service Charge (₹)</label><input id="jc-service" type="number" min="0" step="0.01" placeholder="0" oninput="updateJobTotal()"/></div>
+          <div class="field"><label>Parts Amount (₹)</label><input id="jc-partsamt" type="number" min="0" step="0.01" placeholder="0" oninput="updateJobTotal()"/></div>
+          <div class="field"><label>Total Amount (₹)</label><input id="jc-total" type="number" readonly/></div>
+        </div></div>
+        <div id="job-feedback"></div>
+        <div class="job-actions"><button class="btn-p btn-save" onclick="saveJobCard()">Save Job Card</button><button class="btn-p" style="background:#25D366;color:#fff" onclick="sendJobCard()">PDF + WhatsApp</button></div>
+      </div>
+    </div>
   </div>
 
   <!-- EMPLOYEES TAB -->
@@ -510,10 +581,11 @@ body{font-family:'DM Sans',sans-serif;background:linear-gradient(180deg,#f5f1eb 
   <div class="field"><label>Customer Name <span class="req">*</span></label><input id="m-name" type="text" placeholder="e.g. Ravi Kumar"/></div>
   <div class="field">
     <label>Mobile Number <span class="req">*</span></label>
-    <input id="m-mob" type="tel" placeholder="e.g. 9876543210" maxlength="15"/>
-    <div class="field-note">10-digit mobile number</div>
+    <input id="m-mob" type="tel" placeholder="e.g. 9876543210" maxlength="15" oninput="lookupCustomerByMobile()"/>
+    <div class="field-note">Enter a saved mobile number to fetch the customer.</div>
+    <div id="m-customer-match" style="font-size:11px;color:var(--accent);font-weight:700;min-height:16px;margin-top:4px"></div>
   </div>
-  <div class="field"><label>Product Name <span class="req">*</span></label><input id="m-prod" type="text" placeholder="e.g. Rice 5kg" list="pdl"/><datalist id="pdl"></datalist></div>
+  <div class="field"><label id="m-prod-label">Product Name <span class="req">*</span></label><input id="m-prod" type="text" placeholder="e.g. Rice 5kg" list="pdl"/><datalist id="pdl"></datalist></div>
   <div class="field">
     <label>Description <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px">(optional)</span></label>
     <textarea id="m-desc" placeholder="e.g. Customer enquired about bulk order, needs follow-up…"></textarea>
@@ -573,6 +645,8 @@ var CU=null; // current user
 var CQ_ID=null;
 var EDIT_ID=null;
 var QT='';
+var FEEDBACK_ID=null;
+var FEEDBACK_RATING=0;
 var CM={},CI=0;
 var CC=['b-green','b-amber','b-blue','b-coral','b-purple'];
 
@@ -647,8 +721,31 @@ function doViewOnly(){
 }
 window.addEventListener('DOMContentLoaded', function(){
   resetToLoginState();
+  var params=new URLSearchParams(window.location.search);
+  if(params.get('feedback')){
+    FEEDBACK_ID=Number(params.get('feedback'));
+    document.getElementById('login-screen').classList.remove('active');
+    document.getElementById('app-screen').classList.remove('active');
+    document.getElementById('feedback-screen').style.display='flex';
+  }
 });
 document.getElementById('lg-pass').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
+document.querySelectorAll('#rating-pick button').forEach(function(btn){btn.addEventListener('click',function(){FEEDBACK_RATING=Number(btn.dataset.rating);document.querySelectorAll('#rating-pick button').forEach(function(item){item.classList.toggle('selected',Number(item.dataset.rating)<=FEEDBACK_RATING);});});});
+
+function renderFeedbackMode(){
+  if(!FEEDBACK_ID)return;
+  var r=RECORDS.find(function(x){return x.id===FEEDBACK_ID;});
+  if(!r){document.getElementById('feedback-form').innerHTML='<div class="feedback-thanks"><strong>Job not found</strong><p>This feedback link is no longer available.</p></div>';return;}
+  document.getElementById('feedback-title').textContent='How was your service, '+r.name+'?';
+  if(r.feedback){document.getElementById('feedback-form').style.display='none';document.getElementById('feedback-thanks').style.display='block';}
+}
+function submitFeedback(){
+  var r=RECORDS.find(function(x){return x.id===FEEDBACK_ID;});
+  if(!r)return;
+  if(!FEEDBACK_RATING){document.getElementById('feedback-error').textContent='Please choose a rating.';return;}
+  r.feedback={rating:FEEDBACK_RATING,comment:document.getElementById('feedback-comment').value.trim(),submittedAt:Date.now()};
+  fbSaveRecord(r);document.getElementById('feedback-form').style.display='none';document.getElementById('feedback-thanks').style.display='block';
+}
 
 // ══════════════════════════════════════════════
 //  TABS
@@ -656,12 +753,104 @@ document.getElementById('lg-pass').addEventListener('keydown',function(e){if(e.k
 function switchTab(tab){
   if(VIEW_ONLY&&tab==='emp')tab='queries';
   document.getElementById('tab-queries').classList.toggle('active',tab==='queries');
+  document.getElementById('tab-job').classList.toggle('active',tab==='job');
   document.getElementById('tab-emp').classList.toggle('active',tab==='emp');
   document.getElementById('tab-emp').style.display=VIEW_ONLY?'none':'';
   document.getElementById('queries-tab').style.display=tab==='queries'?'block':'none';
+  document.getElementById('job-tab').style.display=tab==='job'?'block':'none';
   document.getElementById('emp-tab').style.display=tab==='emp'?'block':'none';
   document.getElementById('fab-add').style.display=tab==='queries'?'flex':'none';
   if(tab==='emp'){renderEmpList();renderEmpUI();}
+  if(tab==='job')renderJobRecords();
+}
+
+function renderJobRecords(){
+  var sel=document.getElementById('job-record');
+  if(!sel)return;
+  var current=sel.value;
+  var jobs=RECORDS.filter(function(r){return r.qt==='Service';});
+  sel.innerHTML='<option value="">Select a service job…</option>'+jobs.map(function(r){
+    return '<option value="'+r.id+'">'+esc(r.name)+' · '+esc(r.prod)+' · '+(r.jobCard&&r.jobCard.jobNo?esc(r.jobCard.jobNo):'Not started')+'</option>';
+  }).join('');
+  if(jobs.some(function(r){return String(r.id)===current;}))sel.value=current;
+  else if(jobs.length)sel.value=String(jobs[0].id);
+  loadJobCard();
+}
+function jobField(id){return document.getElementById(id).value.trim();}
+function setJobField(id,value){document.getElementById(id).value=value||'';}
+function openNewServiceJob(){
+  if(VIEW_ONLY){alert('View Only mode cannot create a new entry.');return;}
+  switchTab('queries');openD();pickQt('Service');
+}
+function normalizeMobile(value){return String(value||'').replace(/\D/g,'');}
+function lookupCustomerByMobile(){
+  var raw=document.getElementById('m-mob').value.trim(),digits=normalizeMobile(raw),match=null;
+  if(digits.length>=7){
+    match=RECORDS.find(function(r){return normalizeMobile(r.mob)===digits;});
+  }
+  var note=document.getElementById('m-customer-match');
+  if(!match){note.textContent='';return;}
+  if(!document.getElementById('m-name').value.trim())document.getElementById('m-name').value=match.name||'';
+  if(QT!=='Service'&&!document.getElementById('m-prod').value.trim())document.getElementById('m-prod').value=match.prod||'';
+  note.textContent='✓ Customer found: '+match.name;
+}
+function openExistingJobCard(id){
+  var r=RECORDS.find(function(x){return x.id===id;});
+  if(!r||r.qt!=='Service')return;
+  switchTab('job');
+  var sel=document.getElementById('job-record');sel.value=String(id);loadJobCard();
+}
+function loadJobCard(){
+  var id=Number(document.getElementById('job-record').value);
+  var r=RECORDS.find(function(x){return x.id===id;});
+  var empty=document.getElementById('job-empty'),form=document.getElementById('job-form');
+  if(!r){empty.style.display='block';form.style.display='none';return;}
+  empty.style.display='none';form.style.display='block';
+  var j=r.jobCard||{};
+  setJobField('jc-customer',r.name);
+  setJobField('jc-jobno',j.jobNo||('SER-'+new Date(r.createdAt||Date.now()).getFullYear()+'-'+String(r.id).slice(-5)));
+  setJobField('jc-date',j.date||new Date().toISOString().slice(0,10));
+  setJobField('jc-address',j.address);setJobField('jc-tech',j.technician||(CU?CU.name:''));
+  setJobField('jc-brand',j.brand);setJobField('jc-model',j.model);setJobField('jc-serial',j.serial);
+  setJobField('jc-complaint',j.complaint||r.qdesc);setJobField('jc-action',j.action);setJobField('jc-parts',j.parts);setJobField('jc-remarks',j.remarks);
+  setJobField('jc-service',j.serviceCharge);setJobField('jc-partsamt',j.partsAmount);updateJobTotal();renderJobFeedback(r);
+}
+function updateJobTotal(){
+  var service=Number(document.getElementById('jc-service').value)||0;
+  var parts=Number(document.getElementById('jc-partsamt').value)||0;
+  document.getElementById('jc-total').value=(service+parts).toFixed(2);
+}
+function saveJobCard(){
+  var id=Number(document.getElementById('job-record').value),r=RECORDS.find(function(x){return x.id===id;});
+  if(!r){alert('Select a service job first.');return null;}
+  var customerName=jobField('jc-customer');
+  if(!customerName){alert('Customer name is required.');return null;}
+  r.name=customerName;
+  r.jobCard={jobNo:jobField('jc-jobno'),date:jobField('jc-date'),address:jobField('jc-address'),technician:jobField('jc-tech'),brand:jobField('jc-brand'),model:jobField('jc-model'),serial:jobField('jc-serial'),complaint:jobField('jc-complaint'),action:jobField('jc-action'),parts:jobField('jc-parts'),remarks:jobField('jc-remarks'),serviceCharge:jobField('jc-service'),partsAmount:jobField('jc-partsamt'),total:jobField('jc-total'),updatedAt:Date.now()};
+  r.st='Closed';r.closeDesc='Service job card completed';r.closedBy=CU?CU.name:'Service';r.closeDate=Date.now();
+  r.jobCard.updatedBy=CU?CU.name:'';fbSaveRecord(r);renderJobRecords();document.getElementById('job-record').value=String(id);loadJobCard();
+  return r;
+}
+function feedbackUrl(id){return window.location.href.split('?')[0]+'?feedback='+encodeURIComponent(id);}
+function renderJobFeedback(r){
+  var f=r.feedback;if(!f){document.getElementById('job-feedback').innerHTML='<div class="feedback-box"><strong>Customer feedback</strong><div style="font-size:12px;color:var(--text2);margin-top:4px">Send the card to invite the customer to rate the service.</div></div>';return;}
+  document.getElementById('job-feedback').innerHTML='<div class="feedback-box"><strong>Customer feedback received</strong><div class="feedback-rating">'+('★'.repeat(Number(f.rating)||0))+'<span style="color:#d9d5cd">'+('★'.repeat(5-(Number(f.rating)||0)))+'</span></div><div style="font-size:12px;color:var(--text2)">'+esc(f.comment||'No comment')+' · '+fmDate(f.submittedAt)+'</div></div>';
+}
+function jobPdf(r){
+  if(!window.jspdf||!window.jspdf.jsPDF){alert('PDF library is still loading. Please try again.');return null;}
+  var j=r.jobCard||{},doc=new window.jspdf.jsPDF(),y=18;
+  doc.setFontSize(18);doc.setTextColor(27,67,50);doc.text('ELDORADO',14,y);doc.setFontSize(10);doc.setTextColor(100,95,88);doc.text('Trusted IT Service & Maintenance',14,y+6);doc.setFontSize(15);doc.setTextColor(30,40,35);doc.text('SERVICE JOB CARD',196,y,{align:'right'});y+=16;
+  doc.setDrawColor(207,228,213);doc.line(14,y,196,y);y+=10;
+  var rows=[['Job No.',j.jobNo||'-','Date',j.date||'-'],['Customer',r.name,'Mobile',r.mob],['Product',r.prod,'Brand',j.brand||'-'],['Model No.',j.model||'-','Serial No.',j.serial||'-'],['Technician',j.technician||'-','Address',j.address||'-']];
+  doc.setFontSize(10);rows.forEach(function(row){doc.setTextColor(105,100,93);doc.text(row[0],14,y);doc.setTextColor(24,22,15);doc.text(String(row[1]).slice(0,42),48,y);doc.setTextColor(105,100,93);doc.text(row[2],108,y);doc.setTextColor(24,22,15);doc.text(String(row[3]).slice(0,42),138,y);y+=8;});
+  y+=3;[['COMPLAINT / ISSUE REPORTED',j.complaint],['SERVICE DETAILS & ACTION TAKEN',j.action],['PARTS REPLACED',j.parts],['REMARKS',j.remarks]].forEach(function(item){doc.setFillColor(239,245,240);doc.rect(14,y-5,182,8,'F');doc.setTextColor(27,67,50);doc.setFontSize(9);doc.text(item[0],18,y);y+=7;doc.setTextColor(30,28,22);doc.setFontSize(10);var lines=doc.splitTextToSize(item[1]||'-',174);doc.text(lines,18,y);y+=Math.max(10,lines.length*5)+4;});
+  doc.setDrawColor(220,217,210);doc.line(14,y,196,y);y+=9;doc.setFontSize(10);doc.setTextColor(100,95,88);doc.text('Service Charge',120,y);doc.text('Rs. '+(j.serviceCharge||'0'),196,y,{align:'right'});y+=7;doc.text('Parts Amount',120,y);doc.text('Rs. '+(j.partsAmount||'0'),196,y,{align:'right'});y+=8;doc.setTextColor(27,67,50);doc.setFontSize(12);doc.text('TOTAL AMOUNT',120,y);doc.text('Rs. '+(j.total||'0.00'),196,y,{align:'right'});y+=15;doc.setFontSize(9);doc.setTextColor(100,95,88);doc.text('Thank you for trusting Eldorado. Your feedback helps us improve.',14,y);return doc;
+}
+function sendJobCard(){
+  var r=saveJobCard();if(!r)return;var doc=jobPdf(r);if(!doc)return;
+  var blob=doc.output('blob'),file=new File([blob],'service-job-card-'+(r.jobCard.jobNo||r.id)+'.pdf',{type:'application/pdf'}),text='Dear '+r.name+', your Eldorado service job card is attached. Please share your feedback here: '+feedbackUrl(r.id);
+  if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){navigator.share({files:[file],title:'Eldorado Service Job Card',text:text}).catch(function(){});return;}
+  doc.save('service-job-card-'+(r.jobCard.jobNo||r.id)+'.pdf');window.open('https://web.whatsapp.com/send?phone='+encodeURIComponent(r.mob.replace(/\D/g,''))+'&text='+encodeURIComponent(text),'_blank');
 }
 
 // ══════════════════════════════════════════════
@@ -720,6 +909,7 @@ function render(){
     var actionBtn=VIEW_ONLY?'':isClosed
       ?'<button class="bc bc-amber" onclick="openRD('+r.id+')">&#8617; Reopen</button>'
       :'<button class="bc bc-green" onclick="openCQ('+r.id+')">&#10003; Close</button>';
+    var jobCardBtn=(!VIEW_ONLY&&r.qt==='Service')?'<button class="bc bc-green" onclick="openExistingJobCard('+r.id+')">🧾 Job Card</button>':'';
     var editBtn=(!VIEW_ONLY&&isAdmin())?'<button class="bci bci-edit" onclick="openEdit('+r.id+')" title="Edit"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>':'';
     var delBtn=(!VIEW_ONLY&&isAdmin())?'<button class="bci bci-del" onclick="delR('+r.id+')" title="Delete"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>':'';
     return'<div class="record-card'+(isClosed?' is-closed':'')+'">'+
@@ -729,7 +919,7 @@ function render(){
         '<div class="rc-btns">'+
           '<a class="bci bci-call" href="tel:'+esc(r.mob)+'" title="Call"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.42 2 2 0 0 1 3.6 1.25h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6.08 6.08l1.02-.93a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></a>'+
           '<button class="bci bci-view" onclick="openView('+r.id+')" title="View"><svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>'+
-          actionBtn+editBtn+delBtn+
+          jobCardBtn+actionBtn+editBtn+delBtn+
         '</div>'+
       '</div>'+
       '<div class="divider"></div>'+
@@ -884,6 +1074,8 @@ function pickQt(v){
   QT=v;
   document.getElementById('b-sales').className='pick-btn'+(v==='Sales'?' sel-sales':'');
   document.getElementById('b-service').className='pick-btn'+(v==='Service'?' sel-service':'');
+  document.getElementById('m-prod-label').innerHTML=v==='Service'?'Complaint / Issue Reported <span class="req">*</span>':'Product Name <span class="req">*</span>';
+  document.getElementById('m-prod').placeholder=v==='Service'?'e.g. Camera not working, laptop repair required':'e.g. Rice 5kg';
 }
 function openD(){
   EDIT_ID=null;QT='';
@@ -891,6 +1083,7 @@ function openD(){
   document.getElementById('dr-save-btn').textContent='Save Record';
   document.getElementById('dr-enteredby').textContent=CU?CU.name:'—';
   ['m-name','m-mob','m-prod','m-desc'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('m-customer-match').textContent='';
   document.getElementById('m-err').textContent='';
   document.getElementById('b-sales').className='pick-btn';
   document.getElementById('b-service').className='pick-btn';
@@ -907,11 +1100,13 @@ function openEdit(id){
   document.getElementById('dr-enteredby').textContent=r.enteredBy;
   document.getElementById('m-name').value=r.name;
   document.getElementById('m-mob').value=r.mob;
-  document.getElementById('m-prod').value=r.prod;
+  lookupCustomerByMobile();
+  document.getElementById('m-prod').value=r.qt==='Service'?(r.qdesc||r.prod):r.prod;
   document.getElementById('m-desc').value=r.qdesc||'';
   document.getElementById('m-err').textContent='';
   document.getElementById('b-sales').className='pick-btn'+(r.qt==='Sales'?' sel-sales':'');
   document.getElementById('b-service').className='pick-btn'+(r.qt==='Service'?' sel-service':'');
+  pickQt(r.qt);
   show('dr','ov1');
   setTimeout(function(){document.getElementById('m-name').focus();},320);
 }
@@ -919,14 +1114,17 @@ function closeD(){hide('dr','ov1');EDIT_ID=null;}
 function saveR(){
   var name=document.getElementById('m-name').value.trim();
   var mob=document.getElementById('m-mob').value.trim();
-  var prod=document.getElementById('m-prod').value.trim();
+  var enteredValue=document.getElementById('m-prod').value.trim();
+  var prod=enteredValue;
   var qdesc=document.getElementById('m-desc').value.trim();
   var err=document.getElementById('m-err');
   if(!QT){err.textContent='Please select Sales or Service.';return;}
   if(!name){err.textContent='Customer name is required.';return;}
   if(!mob||!/^\d{7,15}$/.test(mob.replace(/[\s\-+()]/g,''))){err.textContent='Enter a valid mobile number.';return;}
-  if(!prod){err.textContent='Product name is required.';return;}
+  if(!enteredValue){err.textContent=QT==='Service'?'Complaint / Issue Reported is required.':'Product name is required.';return;}
+  if(QT==='Service'){prod='Service Call';qdesc=enteredValue+(qdesc?'\n'+qdesc:'');}
   err.textContent='';
+  var createdServiceId=null;
   if(EDIT_ID!==null){
     RECORDS=RECORDS.map(function(r){
       if(r.id===EDIT_ID){r.qt=QT;r.name=name;r.mob=mob;r.prod=prod;r.qdesc=qdesc;fbSaveRecord(r);}
@@ -934,6 +1132,7 @@ function saveR(){
     });
   } else {
     var newRec={id:Date.now(),qt:QT,name:name,mob:mob,prod:prod,qdesc:qdesc,st:'Pending',enteredBy:CU.name,createdAt:Date.now(),closeDesc:'',closedBy:'',closeDate:null};
+    createdServiceId=QT==='Service'?newRec.id:null;
     if(db){
       fbSaveRecord(newRec);
     } else {
@@ -942,6 +1141,9 @@ function saveR(){
     }
   }
   closeD();
+  if(createdServiceId!==null){
+    setTimeout(function(){switchTab('job');var sel=document.getElementById('job-record');sel.value=String(createdServiceId);loadJobCard();},250);
+  }
 }
 
 // ══════════════════════════════════════════════
@@ -1177,7 +1379,7 @@ function initFirebase() {
       RECORDS = data ? Object.values(data) : [];
       // sort by createdAt desc
       RECORDS.sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0);});
-      updPF(); updStats(); render();
+      updPF(); updStats(); render(); renderJobRecords(); renderFeedbackMode();
     });
 
   } catch(e) {
