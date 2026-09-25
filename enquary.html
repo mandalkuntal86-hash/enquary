@@ -922,7 +922,7 @@ function jobPdf(r){
   if((j.serviceCategory||r.prod)!=='NEW INSTALL'){
     doc.setDrawColor(220,217,210);doc.line(14,y,196,y);y+=9;doc.setFontSize(10);doc.setTextColor(100,95,88);doc.text('Service Charge',120,y);doc.text('Rs. '+(j.serviceCharge||'0'),196,y,{align:'right'});y+=7;doc.text('Parts Amount',120,y);doc.text('Rs. '+(j.partsAmount||'0'),196,y,{align:'right'});y+=8;doc.setTextColor(27,67,50);doc.setFontSize(12);doc.text('TOTAL AMOUNT',120,y);doc.text('Rs. '+(j.total||'0.00'),196,y,{align:'right'});y+=15;
   }
-  doc.setFontSize(9);doc.setTextColor(100,95,88);doc.text('Thank you for trusting Eldorado. Your feedback helps us improve.',14,y);return doc;
+  doc.setFontSize(9);doc.setTextColor(100,95,88);doc.text('Thank you for trusting Eldorado. Your feedback helps us improve.',14,y);y+=6;doc.setTextColor(27,67,50);doc.text('Feedback: '+feedbackUrl(r.id),14,y);return doc;
 }
 function sendJobCard(){
   var id=Number(document.getElementById('job-record').value),existing=RECORDS.find(function(x){return x.id===id;}),r=existing&&existing.jobCard?existing:saveJobCard();
