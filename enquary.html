@@ -1203,6 +1203,8 @@ function saveR(){
     var newRec={id:Date.now(),qt:QT,name:name,mob:mob,prod:prod,qdesc:qdesc,st:'Pending',enteredBy:CU.name,createdAt:Date.now(),closeDesc:'',closedBy:'',closeDate:null};
     createdServiceId=QT==='Service'?newRec.id:null;
     if(db){
+      RECORDS.push(newRec);
+      updPF();updStats();render();renderJobRecords();
       fbSaveRecord(newRec);
     } else {
       RECORDS.push(newRec);
