@@ -295,7 +295,11 @@ body{font-family:'DM Sans',sans-serif;background:linear-gradient(180deg,#f5f1eb 
 .job-title{font-size:16px;font-weight:800;color:var(--text)}
 .job-sub{font-size:12px;color:var(--text2);margin-top:3px}
 .job-new-btn{border:1px solid var(--accent);border-radius:10px;background:var(--accent);color:#fff;padding:9px 12px;font:700 12px 'DM Sans',sans-serif;cursor:pointer;white-space:nowrap}
-.job-select{display:none}
+.job-filter-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.job-filter-row select{width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text2);outline:none;cursor:pointer}
+.job-filter-row select:focus{border-color:var(--accent)}
+.job-select{display:block;width:100%;margin-bottom:12px;padding:12px 13px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);outline:none;cursor:pointer}
+.job-select:focus{border-color:var(--accent);background:var(--surface)}
 .job-summary{background:linear-gradient(135deg,#eef7f1,#f8f6f3);border:1px solid #cfe4d5;border-radius:var(--radius-sm);padding:12px;margin-bottom:12px}
 .job-summary strong{font-size:14px}.job-summary span{font-size:12px;color:var(--text2);display:block;margin-top:3px}
 .job-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:10px}
@@ -484,6 +488,10 @@ body{font-family:'DM Sans',sans-serif;background:linear-gradient(180deg,#f5f1eb 
   <div id="job-tab" style="display:none">
     <div class="job-tab-wrap">
       <div class="job-head"><div><div class="job-title">Service Job Card</div><div class="job-sub">Complete the service sheet and send it to your customer.</div></div><div style="display:flex;align-items:center;gap:7px"><span class="badge b-service">🔧 Service</span><button class="job-new-btn" onclick="openNewServiceJob()">＋ New Entry</button></div></div>
+      <div class="job-filter-row">
+        <select id="job-category-filter" onchange="renderJobRecords()"><option value="">All Categories</option><option value="CCTV SERVICE">CCTV SERVICE</option><option value="NEW INSTALL">NEW INSTALL</option><option value="OTHERS">OTHERS</option></select>
+        <select id="job-status-filter" onchange="renderJobRecords()"><option value="">All Status</option><option value="Closed">Closed</option><option value="Pending">Pending</option></select>
+      </div>
       <select class="job-select" id="job-record" onchange="loadJobCard()"><option value="">Select a service job…</option></select>
       <div id="job-empty" class="empty-state" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm)"><div class="empty-title">Select a Service query</div><div class="empty-sub">The completed card and customer feedback will stay attached to that job.</div></div>
       <div id="job-form" style="display:none">
@@ -685,7 +693,13 @@ function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 function fmDate(ts){return new Date(ts).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});}
 function isAdmin(){return CU&&CU.role==='Admin';}
 function entryByName(r){return r.enteredBy;}
-function serviceCategoryOf(r){return(r.jobCard&&r.jobCard.serviceCategory)||(['CCTV SERVICE','NEW INSTALL','OTHERS'].includes(r.prod)?r.prod:'');}
+function isServiceRecord(r){return String(r.qt||'').trim().toLowerCase()==='service';}
+function serviceCategoryOf(r){
+  var category=(r.jobCard&&r.jobCard.serviceCategory)||r.prod||'';
+  category=String(category).trim().toUpperCase();
+  if(['CCTV SERVICE','NEW INSTALL','OTHERS'].includes(category))return category;
+  return isServiceRecord(r)?'OTHERS':'';
+}
 function show(dId,oId){document.getElementById(dId).classList.add('open');document.getElementById(oId).classList.add('open');}
 function hide(dId,oId){document.getElementById(dId).classList.remove('open');document.getElementById(oId).classList.remove('open');}
 
@@ -796,10 +810,20 @@ function renderJobRecords(){
   var sel=document.getElementById('job-record');
   if(!sel)return;
   var current=sel.value;
-  var jobs=RECORDS.filter(function(r){return r.qt==='Service';});
-  sel.innerHTML='<option value="">Select a service job…</option>'+jobs.map(function(r){
-    return '<option value="'+r.id+'">'+esc(r.name)+' · '+esc(r.prod)+' · '+(r.jobCard&&r.jobCard.jobNo?esc(r.jobCard.jobNo):'Not started')+'</option>';
+  var category=document.getElementById('job-category-filter').value;
+  var status=document.getElementById('job-status-filter').value;
+  var jobs=RECORDS.filter(function(r){
+    return isServiceRecord(r)&&(!category||serviceCategoryOf(r)===category)&&(!status||String(r.st||'').trim()===status);
+  });
+  var categoryOrder=['CCTV SERVICE','NEW INSTALL','OTHERS'];
+  var grouped=categoryOrder.map(function(group){
+    var groupJobs=jobs.filter(function(r){return serviceCategoryOf(r)===group;});
+    if(!groupJobs.length)return '';
+    return '<optgroup label="'+group+'">'+groupJobs.map(function(r){
+      return '<option value="'+r.id+'">'+esc(r.name)+' · '+esc(r.mob)+' · '+(r.jobCard&&r.jobCard.jobNo?esc(r.jobCard.jobNo):'Not started')+'</option>';
+    }).join('')+'</optgroup>';
   }).join('');
+  sel.innerHTML='<option value="">Select a service job…</option>'+grouped;
   if(jobs.some(function(r){return String(r.id)===current;}))sel.value=current;
   else if(jobs.length)sel.value=String(jobs[0].id);
   loadJobCard();
@@ -809,7 +833,7 @@ function setJobField(id,value){document.getElementById(id).value=value||'';}
 function setJobSaveMessage(text,isError){var el=document.getElementById('job-save-msg');if(el){el.textContent=text;el.style.color=isError?'var(--danger)':'var(--closed)';}}
 function setJobCardEditState(record){
   var saved=!!record.jobCard,completed=record.st==='Closed';
-  var canEdit=!completed||isAdmin();
+  var canEdit=!saved||isAdmin();
   ['jc-customer','jc-mobile','jc-jobno','jc-date','jc-service-type','jc-address','jc-tech','jc-brand','jc-model','jc-serial','jc-complaint','jc-action','jc-parts','jc-remarks','jc-service','jc-partsamt'].forEach(function(id){
     var field=document.getElementById(id);if(field)field.disabled=!canEdit;
   });
@@ -851,7 +875,7 @@ function loadJobCard(){
   setJobField('jc-jobno',j.jobNo||('SER-'+new Date(r.createdAt||Date.now()).getFullYear()+'-'+String(r.id).slice(-5)));
   setJobField('jc-date',j.date||new Date().toISOString().slice(0,10));
   setJobField('jc-entryby',j.entryBy||r.enteredBy||(CU?CU.name:''));
-  var serviceType=j.serviceCategory||r.prod||'';
+  var serviceType=j.serviceCategory||serviceCategoryOf(r)||r.prod||'';
   setJobField('jc-service-type',serviceType);
   document.getElementById('job-billing-section').style.display=serviceType==='NEW INSTALL'?'none':'';
   setJobField('jc-address',j.address);setJobField('jc-tech',r.st==='Pending'&&CU?CU.name:(j.technician||(CU?CU.name:'')));
@@ -868,6 +892,7 @@ function saveJobCard(){
   var id=Number(document.getElementById('job-record').value),r=RECORDS.find(function(x){return x.id===id;});
   setJobSaveMessage('',false);
   if(!r){setJobSaveMessage('Select a service job first.',true);return null;}
+  if(r.jobCard&&!isAdmin()){setJobSaveMessage('Only Admin can update saved job cards.',true);return null;}
   var customerName=jobField('jc-customer');
   var technicianName=CU?CU.name:jobField('jc-tech');
   if(!customerName){setJobSaveMessage('Customer name is required.',true);return null;}
@@ -875,13 +900,17 @@ function saveJobCard(){
   var serviceType=jobField('jc-service-type')||r.prod;
   var needsBilling=serviceType!=='NEW INSTALL';
   r.name=customerName;
-  r.jobCard={jobNo:jobField('jc-jobno'),date:jobField('jc-date'),entryBy:r.enteredBy||jobField('jc-entryby'),serviceCategory:serviceType,address:jobField('jc-address'),technician:technicianName,brand:jobField('jc-brand'),model:jobField('jc-model'),serial:jobField('jc-serial'),complaint:jobField('jc-complaint'),action:jobField('jc-action'),parts:jobField('jc-parts'),remarks:jobField('jc-remarks'),serviceCharge:needsBilling?jobField('jc-service'):'',partsAmount:needsBilling?jobField('jc-partsamt'):'',total:needsBilling?jobField('jc-total'):'',updatedAt:Date.now()};
-  r.st='Closed';r.closeDesc='Service job card completed';r.closedBy=technicianName;r.closeDate=Date.now();
+  var completedAt=Date.now();
+  r.jobCard={jobNo:jobField('jc-jobno'),date:jobField('jc-date'),entryBy:r.enteredBy||jobField('jc-entryby'),serviceCategory:serviceType,address:jobField('jc-address'),technician:technicianName,brand:jobField('jc-brand'),model:jobField('jc-model'),serial:jobField('jc-serial'),complaint:jobField('jc-complaint'),action:jobField('jc-action'),parts:jobField('jc-parts'),remarks:jobField('jc-remarks'),serviceCharge:needsBilling?jobField('jc-service'):'',partsAmount:needsBilling?jobField('jc-partsamt'):'',total:needsBilling?jobField('jc-total'):'',status:'Closed',completedAt:completedAt,updatedAt:completedAt};
+  r.st='Closed';r.closeDesc='Service job card completed';r.closedBy=technicianName;r.closeDate=completedAt;
   r.jobCard.updatedBy=CU?CU.name:'';
   setJobSaveMessage('Job card saved.',false);
   var saveRequest=fbSaveRecord(r);
+  if(saveRequest&&saveRequest.then)saveRequest.then(function(){r.st='Closed';r.closeDesc='Service job card completed';r.closedBy=technicianName;r.closeDate=completedAt;updStats();render();});
   if(saveRequest&&saveRequest.catch)saveRequest.catch(function(){setJobSaveMessage('Saved locally, but Firebase sync failed.',true);});
-  renderJobRecords();document.getElementById('job-record').value=String(id);loadJobCard();setJobSaveMessage('Job card saved.',false);
+  updStats();render();
+  setJobSaveMessage('Job card saved.',false);
+  switchTab('queries');
   return r;
 }
 function feedbackUrl(id){return window.location.href.split('?')[0]+'?feedback='+encodeURIComponent(id);}
@@ -904,6 +933,7 @@ function jobPdf(r){
 }
 function sendJobCard(){
   var id=Number(document.getElementById('job-record').value),existing=RECORDS.find(function(x){return x.id===id;}),r=existing&&existing.jobCard?existing:saveJobCard();
+  if(!r)return;
   if(!r)return;var doc=jobPdf(r);if(!doc)return;
   var blob=doc.output('blob'),file=new File([blob],'service-job-card-'+(r.jobCard.jobNo||r.id)+'.pdf',{type:'application/pdf'}),text='Dear '+r.name+', your Eldorado service job card is attached. Please share your feedback here: '+feedbackUrl(r.id);
   if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){navigator.share({files:[file],title:'Eldorado Service Job Card',text:text}).catch(function(){});return;}
@@ -960,7 +990,7 @@ function render(){
     var d=r.createdAt;
     return(!q||r.name.toLowerCase().includes(q)||r.prod.toLowerCase().includes(q)||r.mob.includes(q))&&
            (!fq||r.qt===fq)&&(!fs||r.st===fs)&&(!fp||r.prod===fp)&&
-           (!JOB_DONE_FILTER||(r.qt==='Service'&&!!r.jobCard))&&
+           (!JOB_DONE_FILTER||isServiceRecord(r))&&
            (!JOB_STATUS_FILTER||(r.st===(JOB_STATUS_FILTER==='complete'?'Closed':'Pending')))&&
            (!JOB_CATEGORY_FILTER||serviceCategoryOf(r)===JOB_CATEGORY_FILTER)&&
            (!fromMs||d>=fromMs)&&(!toMs||d<=toMs);
@@ -1165,7 +1195,7 @@ function openD(){
   setTimeout(function(){document.getElementById('m-name').focus();},320);
 }
 function openEdit(id){
-  if(!isAdmin()){alert('Only Admin can edit queries.');return;}
+  if(VIEW_ONLY||!CU){alert('Please log in to edit queries.');return;}
   var r=RECORDS.find(function(x){return x.id===id;});
   if(!r)return;
   EDIT_ID=id;QT=r.qt;
