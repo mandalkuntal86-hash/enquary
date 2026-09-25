@@ -149,12 +149,12 @@ body{font-family:'DM Sans',sans-serif;background:linear-gradient(180deg,#f5f1eb 
 .record-card:hover{transform:translateY(-1px);box-shadow:0 14px 28px rgba(18,30,25,.08)}
 .record-card.is-closed{border-left-color:var(--closed)}
 @keyframes up{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-.rc-top{display:flex;align-items:flex-start;gap:10px;margin-bottom:12px}
+.rc-top{display:grid;grid-template-columns:42px minmax(0,1fr);align-items:start;gap:10px;margin-bottom:12px}
 .av{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0;background:linear-gradient(135deg,#d7f0e5,#cfece0);color:var(--accent-tx);box-shadow:inset 0 1px rgba(255,255,255,.8)}
 .av.avc{background:linear-gradient(135deg,#d8f5e1,#cfead8);color:var(--closed-tx)}
 .rc-name{font-size:15px;font-weight:800;color:var(--text);line-height:1.2;letter-spacing:-.01em}
 .rc-mob{font-size:12px;color:var(--text2);font-family:'DM Mono',monospace;margin-top:2px}
-.rc-btns{margin-left:auto;display:flex;gap:5px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end}
+.rc-btns{grid-column:1/-1;display:flex;gap:5px;align-items:center;flex-wrap:wrap;justify-content:flex-start;min-width:0}
 .bc{padding:5px 10px;border-radius:999px;font-size:11px;font-weight:700;cursor:pointer;border:none;font-family:'DM Sans',sans-serif;white-space:nowrap}
 .bc-green{background:linear-gradient(135deg,#1d5042,#153f32);color:#fff;box-shadow:0 8px 18px rgba(24,78,61,.18)}
 .bc-amber{background:linear-gradient(135deg,#fef3dc,#f9e4af);color:var(--pending-tx)}
@@ -433,6 +433,8 @@ body{font-family:'DM Sans',sans-serif;background:linear-gradient(180deg,#f5f1eb 
       <div class="stat stat-total"><div class="stat-val" id="s-total">0</div><div class="stat-lbl">Total</div></div>
       <div class="stat stat-closed"><div class="stat-val" id="s-closed">0</div><div class="stat-lbl">Closed</div></div>
       <div class="stat stat-pending"><div class="stat-val" id="s-pending">0</div><div class="stat-lbl">Pending</div></div>
+      <div class="stat stat-closed"><div class="stat-val" id="s-jobs">0</div><div class="stat-lbl">Job Cards Done</div></div>
+      <div class="stat stat-total"><div class="stat-val" id="s-revenue">₹0</div><div class="stat-lbl">Total Revenue</div></div>
     </div>
     <div class="controls">
       <div class="search-wrap">
@@ -751,11 +753,11 @@ function submitFeedback(){
 //  TABS
 // ══════════════════════════════════════════════
 function switchTab(tab){
-  if(VIEW_ONLY&&tab==='emp')tab='queries';
+  if((VIEW_ONLY||!isAdmin())&&tab==='emp')tab='queries';
   document.getElementById('tab-queries').classList.toggle('active',tab==='queries');
   document.getElementById('tab-job').classList.toggle('active',tab==='job');
   document.getElementById('tab-emp').classList.toggle('active',tab==='emp');
-  document.getElementById('tab-emp').style.display=VIEW_ONLY?'none':'';
+  document.getElementById('tab-emp').style.display=(!VIEW_ONLY&&isAdmin())?'':'none';
   document.getElementById('queries-tab').style.display=tab==='queries'?'block':'none';
   document.getElementById('job-tab').style.display=tab==='job'?'block':'none';
   document.getElementById('emp-tab').style.display=tab==='emp'?'block':'none';
@@ -778,8 +780,9 @@ function renderJobRecords(){
 }
 function jobField(id){return document.getElementById(id).value.trim();}
 function setJobField(id,value){document.getElementById(id).value=value||'';}
-function setJobCardEditState(saved){
-  var canEdit=!saved||isAdmin();
+function setJobCardEditState(record){
+  var saved=!!record.jobCard,completed=record.st==='Closed';
+  var canEdit=!completed||isAdmin();
   ['jc-customer','jc-jobno','jc-date','jc-address','jc-tech','jc-brand','jc-model','jc-serial','jc-complaint','jc-action','jc-parts','jc-remarks','jc-service','jc-partsamt'].forEach(function(id){
     var field=document.getElementById(id);if(field)field.disabled=!canEdit;
   });
@@ -822,7 +825,7 @@ function loadJobCard(){
   setJobField('jc-address',j.address);setJobField('jc-tech',j.technician||(CU?CU.name:''));
   setJobField('jc-brand',j.brand);setJobField('jc-model',j.model);setJobField('jc-serial',j.serial);
   setJobField('jc-complaint',j.complaint||r.qdesc);setJobField('jc-action',j.action);setJobField('jc-parts',j.parts);setJobField('jc-remarks',j.remarks);
-  setJobField('jc-service',j.serviceCharge);setJobField('jc-partsamt',j.partsAmount);updateJobTotal();renderJobFeedback(r);setJobCardEditState(!!r.jobCard);
+  setJobField('jc-service',j.serviceCharge);setJobField('jc-partsamt',j.partsAmount);updateJobTotal();renderJobFeedback(r);setJobCardEditState(r);
 }
 function updateJobTotal(){
   var service=Number(document.getElementById('jc-service').value)||0;
@@ -836,7 +839,6 @@ function saveJobCard(){
   if(!customerName){alert('Customer name is required.');return null;}
   r.name=customerName;
   r.jobCard={jobNo:jobField('jc-jobno'),date:jobField('jc-date'),address:jobField('jc-address'),technician:jobField('jc-tech'),brand:jobField('jc-brand'),model:jobField('jc-model'),serial:jobField('jc-serial'),complaint:jobField('jc-complaint'),action:jobField('jc-action'),parts:jobField('jc-parts'),remarks:jobField('jc-remarks'),serviceCharge:jobField('jc-service'),partsAmount:jobField('jc-partsamt'),total:jobField('jc-total'),updatedAt:Date.now()};
-  r.st='Closed';r.closeDesc='Service job card completed';r.closedBy=CU?CU.name:'Service';r.closeDate=Date.now();
   r.jobCard.updatedBy=CU?CU.name:'';fbSaveRecord(r);renderJobRecords();document.getElementById('job-record').value=String(id);loadJobCard();
   return r;
 }
@@ -866,11 +868,16 @@ function sendJobCard(){
 // ══════════════════════════════════════════════
 //  STATS & FILTERS
 // ══════════════════════════════════════════════
-function updStats(){
-  var cl=RECORDS.filter(function(r){return r.st==='Closed';}).length;
-  document.getElementById('s-total').textContent=RECORDS.length;
+function updStats(records){
+  var list=records||RECORDS;
+  var cl=list.filter(function(r){return r.st==='Closed';}).length;
+  var jobs=list.filter(function(r){return r.qt==='Service'&&r.jobCard;});
+  var revenue=jobs.reduce(function(sum,r){return sum+(Number(r.jobCard.total)||Number(r.jobCard.serviceCharge)||0);},0);
+  document.getElementById('s-total').textContent=list.length;
   document.getElementById('s-closed').textContent=cl;
-  document.getElementById('s-pending').textContent=RECORDS.length-cl;
+  document.getElementById('s-pending').textContent=list.length-cl;
+  document.getElementById('s-jobs').textContent=jobs.length;
+  document.getElementById('s-revenue').textContent='₹'+revenue.toLocaleString('en-IN',{maximumFractionDigits:2});
 }
 function updPF(){
   var sel=document.getElementById('f-pr'),val=sel.value;
@@ -904,6 +911,7 @@ function render(){
            (!fq||r.qt===fq)&&(!fs||r.st===fs)&&(!fp||r.prod===fp)&&
            (!fromMs||d>=fromMs)&&(!toMs||d<=toMs);
   });
+  updStats(F);
   document.getElementById('list-lbl').textContent=F.length+' of '+RECORDS.length+' record'+(RECORDS.length!==1?'s':'');
   var el=document.getElementById('rl');
   if(!F.length){
