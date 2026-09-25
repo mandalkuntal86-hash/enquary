@@ -111,18 +111,18 @@ body{font-family:'DM Sans',sans-serif;background:linear-gradient(180deg,#f5f1eb 
 .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
 
 /* STATS */
-.stats-wrap{padding:12px 14px 0;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.stat{background:linear-gradient(180deg,#ffffff 0%,#f8f6f3 100%);border:1px solid var(--border);border-radius:16px;padding:16px 10px 12px;text-align:center;position:relative;overflow:hidden;box-shadow:0 8px 16px rgba(25,35,30,.04)}
+.stats-wrap{padding:10px 14px 0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.stat{background:linear-gradient(180deg,#ffffff 0%,#f8f6f3 100%);border:1px solid var(--border);border-radius:12px;padding:10px 8px 9px;text-align:center;position:relative;overflow:hidden;box-shadow:0 6px 12px rgba(25,35,30,.04)}
 .stat::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.28),transparent 45%);pointer-events:none}
 .stat::after{content:'';position:absolute;bottom:0;left:0;right:0;height:4px;border-radius:0 0 16px 16px}
 .stat-total::after{background:linear-gradient(90deg,#1b4332,#2d5e4d)}
 .stat-closed::after{background:linear-gradient(90deg,#145a32,#1f7a43)}
 .stat-pending::after{background:linear-gradient(90deg,#a26b12,#c58a27)}
-.stat-val{font-size:28px;font-weight:800;line-height:1;letter-spacing:-.04em}
+.stat-val{font-size:24px;font-weight:800;line-height:1;letter-spacing:-.04em}
 .stat-total .stat-val{color:var(--text)}
 .stat-closed .stat-val{color:var(--closed)}
 .stat-pending .stat-val{color:var(--pending)}
-.stat-lbl{font-size:10px;font-weight:700;color:var(--text3);margin-top:8px;text-transform:uppercase;letter-spacing:1px}
+.stat-lbl{font-size:9px;font-weight:700;color:var(--text3);margin-top:5px;text-transform:uppercase;letter-spacing:.7px}
 
 /* CONTROLS */
 .controls{padding:12px 14px 0;display:flex;flex-direction:column;gap:9px}
@@ -298,7 +298,7 @@ body{font-family:'DM Sans',sans-serif;background:linear-gradient(180deg,#f5f1eb 
 .job-filter-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
 .job-filter-row select{width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text2);outline:none;cursor:pointer}
 .job-filter-row select:focus{border-color:var(--accent)}
-.job-select{display:block;width:100%;margin-bottom:12px;padding:12px 13px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);outline:none;cursor:pointer}
+.job-select{display:none}
 .job-select:focus{border-color:var(--accent);background:var(--surface)}
 .job-summary{background:linear-gradient(135deg,#eef7f1,#f8f6f3);border:1px solid #cfe4d5;border-radius:var(--radius-sm);padding:12px;margin-bottom:12px}
 .job-summary strong{font-size:14px}.job-summary span{font-size:12px;color:var(--text2);display:block;margin-top:3px}
@@ -332,6 +332,7 @@ body{font-family:'DM Sans',sans-serif;background:linear-gradient(180deg,#f5f1eb 
 
 @media(min-width:640px){
   #app-screen{padding-bottom:0}
+  .stats-wrap{grid-template-columns:repeat(5,minmax(0,1fr))}
   .stats-wrap,.controls,.list-header,.record-list,.tab-bar,#emp-tab{padding-left:24px;padding-right:24px}
   .topbar{padding:0 24px}
   .record-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
@@ -488,10 +489,6 @@ body{font-family:'DM Sans',sans-serif;background:linear-gradient(180deg,#f5f1eb 
   <div id="job-tab" style="display:none">
     <div class="job-tab-wrap">
       <div class="job-head"><div><div class="job-title">Service Job Card</div><div class="job-sub">Complete the service sheet and send it to your customer.</div></div><div style="display:flex;align-items:center;gap:7px"><span class="badge b-service">🔧 Service</span><button class="job-new-btn" onclick="openNewServiceJob()">＋ New Entry</button></div></div>
-      <div class="job-filter-row">
-        <select id="job-category-filter" onchange="renderJobRecords()"><option value="">All Categories</option><option value="CCTV SERVICE">CCTV SERVICE</option><option value="NEW INSTALL">NEW INSTALL</option><option value="OTHERS">OTHERS</option></select>
-        <select id="job-status-filter" onchange="renderJobRecords()"><option value="">All Status</option><option value="Closed">Closed</option><option value="Pending">Pending</option></select>
-      </div>
       <select class="job-select" id="job-record" onchange="loadJobCard()"><option value="">Select a service job…</option></select>
       <div id="job-empty" class="empty-state" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm)"><div class="empty-title">Select a Service query</div><div class="empty-sub">The completed card and customer feedback will stay attached to that job.</div></div>
       <div id="job-form" style="display:none">
@@ -504,9 +501,6 @@ body{font-family:'DM Sans',sans-serif;background:linear-gradient(180deg,#f5f1eb 
           <div class="field"><label>Service Category</label><input id="jc-service-type" type="text" readonly/></div>
           <div class="field"><label>Address</label><input id="jc-address" type="text" placeholder="Customer address"/></div>
           <div class="field"><label>Technician Name</label><input id="jc-tech" type="text" placeholder="Technician" readonly/></div>
-          <div class="field"><label>Brand</label><input id="jc-brand" type="text" placeholder="e.g. HP, Dell"/></div>
-          <div class="field"><label>Model No.</label><input id="jc-model" type="text" placeholder="Model number"/></div>
-          <div class="field"><label>Serial No.</label><input id="jc-serial" type="text" placeholder="Serial number"/></div>
         </div></div>
         <div class="job-section"><div class="job-section-title">Complaint &amp; service details</div>
           <div class="field"><label>Complaint / Issue Reported</label><textarea id="jc-complaint" placeholder="What issue did the customer report?"></textarea></div>
@@ -810,8 +804,8 @@ function renderJobRecords(){
   var sel=document.getElementById('job-record');
   if(!sel)return;
   var current=sel.value;
-  var category=document.getElementById('job-category-filter').value;
-  var status=document.getElementById('job-status-filter').value;
+  var category='';
+  var status='';
   var jobs=RECORDS.filter(function(r){
     return isServiceRecord(r)&&(!category||serviceCategoryOf(r)===category)&&(!status||String(r.st||'').trim()===status);
   });
@@ -834,7 +828,7 @@ function setJobSaveMessage(text,isError){var el=document.getElementById('job-sav
 function setJobCardEditState(record){
   var saved=!!record.jobCard,completed=record.st==='Closed';
   var canEdit=!saved||isAdmin();
-  ['jc-customer','jc-mobile','jc-jobno','jc-date','jc-service-type','jc-address','jc-tech','jc-brand','jc-model','jc-serial','jc-complaint','jc-action','jc-parts','jc-remarks','jc-service','jc-partsamt'].forEach(function(id){
+  ['jc-customer','jc-mobile','jc-jobno','jc-date','jc-service-type','jc-address','jc-tech','jc-complaint','jc-action','jc-parts','jc-remarks','jc-service','jc-partsamt'].forEach(function(id){
     var field=document.getElementById(id);if(field)field.disabled=!canEdit;
   });
   document.getElementById('jc-tech').readOnly=true;
@@ -879,7 +873,6 @@ function loadJobCard(){
   setJobField('jc-service-type',serviceType);
   document.getElementById('job-billing-section').style.display=serviceType==='NEW INSTALL'?'none':'';
   setJobField('jc-address',j.address);setJobField('jc-tech',r.st==='Pending'&&CU?CU.name:(j.technician||(CU?CU.name:'')));
-  setJobField('jc-brand',j.brand);setJobField('jc-model',j.model);setJobField('jc-serial',j.serial);
   setJobField('jc-complaint',j.complaint||r.qdesc);setJobField('jc-action',j.action);setJobField('jc-parts',j.parts);setJobField('jc-remarks',j.remarks);
   setJobField('jc-service',j.serviceCharge);setJobField('jc-partsamt',j.partsAmount);updateJobTotal();renderJobFeedback(r);setJobCardEditState(r);
 }
@@ -901,7 +894,7 @@ function saveJobCard(){
   var needsBilling=serviceType!=='NEW INSTALL';
   r.name=customerName;
   var completedAt=Date.now();
-  r.jobCard={jobNo:jobField('jc-jobno'),date:jobField('jc-date'),entryBy:r.enteredBy||jobField('jc-entryby'),serviceCategory:serviceType,address:jobField('jc-address'),technician:technicianName,brand:jobField('jc-brand'),model:jobField('jc-model'),serial:jobField('jc-serial'),complaint:jobField('jc-complaint'),action:jobField('jc-action'),parts:jobField('jc-parts'),remarks:jobField('jc-remarks'),serviceCharge:needsBilling?jobField('jc-service'):'',partsAmount:needsBilling?jobField('jc-partsamt'):'',total:needsBilling?jobField('jc-total'):'',status:'Closed',completedAt:completedAt,updatedAt:completedAt};
+  r.jobCard={jobNo:jobField('jc-jobno'),date:jobField('jc-date'),entryBy:r.enteredBy||jobField('jc-entryby'),serviceCategory:serviceType,address:jobField('jc-address'),technician:technicianName,complaint:jobField('jc-complaint'),action:jobField('jc-action'),parts:jobField('jc-parts'),remarks:jobField('jc-remarks'),serviceCharge:needsBilling?jobField('jc-service'):'',partsAmount:needsBilling?jobField('jc-partsamt'):'',total:needsBilling?jobField('jc-total'):'',status:'Closed',completedAt:completedAt,updatedAt:completedAt};
   r.st='Closed';r.closeDesc='Service job card completed';r.closedBy=technicianName;r.closeDate=completedAt;
   r.jobCard.updatedBy=CU?CU.name:'';
   setJobSaveMessage('Job card saved.',false);
@@ -923,7 +916,7 @@ function jobPdf(r){
   var j=r.jobCard||{},doc=new window.jspdf.jsPDF(),y=18;
   doc.setFontSize(18);doc.setTextColor(27,67,50);doc.text('ELDORADO',14,y);doc.setFontSize(10);doc.setTextColor(100,95,88);doc.text('Trusted IT Service & Maintenance',14,y+6);doc.setFontSize(15);doc.setTextColor(30,40,35);doc.text('SERVICE JOB CARD',196,y,{align:'right'});y+=16;
   doc.setDrawColor(207,228,213);doc.line(14,y,196,y);y+=10;
-  var rows=[['Job No.',j.jobNo||'-','Date',j.date||'-'],['Customer',r.name,'Mobile',r.mob],['Service Type',j.serviceCategory||r.prod||'-','Brand',j.brand||'-'],['Model No.',j.model||'-','Serial No.',j.serial||'-'],['Entry By',j.entryBy||'-','Technician',j.technician||'-'],['Address',j.address||'-','','']];
+  var rows=[['Job No.',j.jobNo||'-','Date',j.date||'-'],['Customer',r.name,'Mobile',r.mob],['Service Type',j.serviceCategory||r.prod||'-','',''],['Entry By',j.entryBy||'-','Technician',j.technician||'-'],['Address',j.address||'-','','']];
   doc.setFontSize(10);rows.forEach(function(row){doc.setTextColor(105,100,93);doc.text(row[0],14,y);doc.setTextColor(24,22,15);doc.text(String(row[1]).slice(0,42),48,y);doc.setTextColor(105,100,93);doc.text(row[2],108,y);doc.setTextColor(24,22,15);doc.text(String(row[3]).slice(0,42),138,y);y+=8;});
   y+=3;[['COMPLAINT / ISSUE REPORTED',j.complaint],['SERVICE DETAILS & ACTION TAKEN',j.action],['PARTS REPLACED',j.parts],['REMARKS',j.remarks]].forEach(function(item){doc.setFillColor(239,245,240);doc.rect(14,y-5,182,8,'F');doc.setTextColor(27,67,50);doc.setFontSize(9);doc.text(item[0],18,y);y+=7;doc.setTextColor(30,28,22);doc.setFontSize(10);var lines=doc.splitTextToSize(item[1]||'-',174);doc.text(lines,18,y);y+=Math.max(10,lines.length*5)+4;});
   if((j.serviceCategory||r.prod)!=='NEW INSTALL'){
