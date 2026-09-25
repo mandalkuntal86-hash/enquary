@@ -303,6 +303,7 @@ body{font-family:'DM Sans',sans-serif;background:linear-gradient(180deg,#f5f1eb 
 .job-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
 .job-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
 .job-actions .btn-p{font-size:13px;padding:12px}
+.job-save-msg{grid-column:1/-1;font-size:12px;font-weight:700;text-align:center;min-height:16px;color:var(--closed)}
 .feedback-box{border:1px solid #cfe4d5;background:#f3fbf5;border-radius:var(--radius-sm);padding:12px;margin-top:10px}
 .feedback-rating{font-size:22px;letter-spacing:4px;color:#d48a16;margin-top:5px}
 .feedback-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:linear-gradient(135deg,#e8f2eb,#f7f3ed)}
@@ -511,7 +512,7 @@ body{font-family:'DM Sans',sans-serif;background:linear-gradient(180deg,#f5f1eb 
           <div class="field"><label>Total Amount (₹)</label><input id="jc-total" type="number" readonly/></div>
         </div></div>
         <div id="job-feedback"></div>
-        <div class="job-actions"><button class="btn-p btn-save" id="job-save-btn" onclick="saveJobCard()">Save Job Card</button><button class="btn-p" style="background:#25D366;color:#fff" onclick="sendJobCard()">PDF + WhatsApp</button></div>
+        <div class="job-actions"><button class="btn-p btn-save" id="job-save-btn" onclick="saveJobCard()">Save Job Card</button><button class="btn-p" style="background:#25D366;color:#fff" onclick="sendJobCard()">PDF + WhatsApp</button><div class="job-save-msg" id="job-save-msg" aria-live="polite"></div></div>
       </div>
     </div>
   </div>
@@ -804,6 +805,7 @@ function renderJobRecords(){
 }
 function jobField(id){return document.getElementById(id).value.trim();}
 function setJobField(id,value){document.getElementById(id).value=value||'';}
+function setJobSaveMessage(text,isError){var el=document.getElementById('job-save-msg');if(el){el.textContent=text;el.style.color=isError?'var(--danger)':'var(--closed)';}}
 function setJobCardEditState(record){
   var saved=!!record.jobCard,completed=record.st==='Closed';
   var canEdit=!completed||isAdmin();
@@ -863,16 +865,21 @@ function updateJobTotal(){
 }
 function saveJobCard(){
   var id=Number(document.getElementById('job-record').value),r=RECORDS.find(function(x){return x.id===id;});
-  if(!r){alert('Select a service job first.');return null;}
+  setJobSaveMessage('',false);
+  if(!r){setJobSaveMessage('Select a service job first.',true);return null;}
   var customerName=jobField('jc-customer');
   var technicianName=CU?CU.name:jobField('jc-tech');
-  if(!customerName){alert('Customer name is required.');return null;}
-  if(!technicianName){alert('Technician name is required.');return null;}
+  if(!customerName){setJobSaveMessage('Customer name is required.',true);return null;}
+  if(!technicianName){setJobSaveMessage('Technician name is required.',true);return null;}
   var serviceType=jobField('jc-service-type')||r.prod;
   var needsBilling=serviceType!=='NEW INSTALL';
   r.name=customerName;
   r.jobCard={jobNo:jobField('jc-jobno'),date:jobField('jc-date'),entryBy:r.enteredBy||jobField('jc-entryby'),serviceCategory:serviceType,address:jobField('jc-address'),technician:technicianName,brand:jobField('jc-brand'),model:jobField('jc-model'),serial:jobField('jc-serial'),complaint:jobField('jc-complaint'),action:jobField('jc-action'),parts:jobField('jc-parts'),remarks:jobField('jc-remarks'),serviceCharge:needsBilling?jobField('jc-service'):'',partsAmount:needsBilling?jobField('jc-partsamt'):'',total:needsBilling?jobField('jc-total'):'',updatedAt:Date.now()};
-  r.jobCard.updatedBy=CU?CU.name:'';fbSaveRecord(r);renderJobRecords();document.getElementById('job-record').value=String(id);loadJobCard();
+  r.jobCard.updatedBy=CU?CU.name:'';
+  setJobSaveMessage('Job card saved.',false);
+  var saveRequest=fbSaveRecord(r);
+  if(saveRequest&&saveRequest.catch)saveRequest.catch(function(){setJobSaveMessage('Saved locally, but Firebase sync failed.',true);});
+  renderJobRecords();document.getElementById('job-record').value=String(id);loadJobCard();setJobSaveMessage('Job card saved.',false);
   return r;
 }
 function feedbackUrl(id){return window.location.href.split('?')[0]+'?feedback='+encodeURIComponent(id);}
@@ -1477,8 +1484,8 @@ function initFirebase() {
 
 // ── Firebase WRITE helpers ──
 function fbSaveRecord(rec) {
-  if (!db) return;
-  db.ref('records/' + rec.id).set(rec).catch(function(e){console.error('Save record error:',e);});
+  if (!db) return null;
+  return db.ref('records/' + rec.id).set(rec).catch(function(e){console.error('Save record error:',e);throw e;});
 }
 function fbDeleteRecord(id) {
   if (!db) return;
