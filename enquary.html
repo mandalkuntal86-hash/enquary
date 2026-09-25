@@ -683,6 +683,7 @@ function ini(n){return(n||'').trim().split(/\s+/).slice(0,2).map(function(w){ret
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function fmDate(ts){return new Date(ts).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});}
 function isAdmin(){return CU&&CU.role==='Admin';}
+function entryByName(r){return r.enteredBy;}
 function show(dId,oId){document.getElementById(dId).classList.add('open');document.getElementById(oId).classList.add('open');}
 function hide(dId,oId){document.getElementById(dId).classList.remove('open');document.getElementById(oId).classList.remove('open');}
 
@@ -870,7 +871,7 @@ function saveJobCard(){
   var serviceType=jobField('jc-service-type')||r.prod;
   var needsBilling=serviceType!=='NEW INSTALL';
   r.name=customerName;
-  r.jobCard={jobNo:jobField('jc-jobno'),date:jobField('jc-date'),entryBy:CU?CU.name:jobField('jc-entryby'),serviceCategory:serviceType,address:jobField('jc-address'),technician:technicianName,brand:jobField('jc-brand'),model:jobField('jc-model'),serial:jobField('jc-serial'),complaint:jobField('jc-complaint'),action:jobField('jc-action'),parts:jobField('jc-parts'),remarks:jobField('jc-remarks'),serviceCharge:needsBilling?jobField('jc-service'):'',partsAmount:needsBilling?jobField('jc-partsamt'):'',total:needsBilling?jobField('jc-total'):'',updatedAt:Date.now()};
+  r.jobCard={jobNo:jobField('jc-jobno'),date:jobField('jc-date'),entryBy:r.enteredBy||jobField('jc-entryby'),serviceCategory:serviceType,address:jobField('jc-address'),technician:technicianName,brand:jobField('jc-brand'),model:jobField('jc-model'),serial:jobField('jc-serial'),complaint:jobField('jc-complaint'),action:jobField('jc-action'),parts:jobField('jc-parts'),remarks:jobField('jc-remarks'),serviceCharge:needsBilling?jobField('jc-service'):'',partsAmount:needsBilling?jobField('jc-partsamt'):'',total:needsBilling?jobField('jc-total'):'',updatedAt:Date.now()};
   r.jobCard.updatedBy=CU?CU.name:'';fbSaveRecord(r);renderJobRecords();document.getElementById('job-record').value=String(id);loadJobCard();
   return r;
 }
@@ -990,7 +991,7 @@ function render(){
       '<div class="rc-row"><span class="rk">Product</span><span class="badge '+gc(r.prod)+'">'+esc(r.prod)+'</span></div>'+
       (r.qdesc?'<div class="rc-row"><span class="rk">Note</span><span class="rv" style="font-size:12px;color:var(--text2)">'+esc(r.qdesc)+'</span></div>':'')+
       noteBlock+
-      '<div class="entry-meta"><span>📝 Entry by: <strong>'+esc(r.enteredBy)+'</strong></span><span>'+fmDate(r.createdAt)+'</span></div>'+
+      '<div class="entry-meta"><span>📝 Entry by: <strong>'+esc(entryByName(r))+'</strong></span><span>'+fmDate(r.createdAt)+'</span></div>'+
       '<button onclick="waShare('+r.id+')" style="width:100%;margin-top:10px;padding:9px;background:#25D366;border:none;border-radius:9px;font-family:\'DM Sans\',sans-serif;font-size:13px;font-weight:700;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px">'+
         '<svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:#fff;stroke:none"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.126 1.532 5.859L.057 23.928a.5.5 0 0 0 .614.614l6.107-1.46A11.945 11.945 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.891 0-3.667-.523-5.187-1.434l-.37-.222-3.827.915.935-3.796-.241-.382A9.96 9.96 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>'+
         'Send Card via WhatsApp'+
@@ -1020,7 +1021,7 @@ function openView(id){
     '<div class="modal-row"><span class="modal-key">Status</span>'+stB+'</div>'+
     '<div class="modal-row"><span class="modal-key">Product</span><span class="modal-val"><span class="badge '+gc(r.prod)+'">'+esc(r.prod)+'</span></span></div>'+
     (r.qdesc?'<div class="modal-row"><span class="modal-key">Description</span><span class="modal-val" style="font-size:13px;color:var(--text2)">'+esc(r.qdesc)+'</span></div>':'')+
-    '<div class="modal-row"><span class="modal-key">Entry By</span><span class="modal-val" style="font-weight:600">'+esc(r.enteredBy)+'</span></div>'+
+    '<div class="modal-row"><span class="modal-key">Entry By</span><span class="modal-val" style="font-weight:600">'+esc(entryByName(r))+'</span></div>'+
     '<div class="modal-row"><span class="modal-key">Entry Date</span><span class="modal-val" style="font-size:12px;font-family:DM Mono,monospace">'+fmDate(r.createdAt)+'</span></div>'+
     noteSection+
     '<a class="modal-call-btn" href="tel:'+esc(r.mob)+'"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.42 2 2 0 0 1 3.6 1.25h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6.08 6.08l1.02-.93a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>📞 Call '+esc(r.mob)+'</a>'+
@@ -1095,7 +1096,7 @@ function waShare(id){
       noteRow+
       closeNote+
       '<div style="font-size:10px;color:#A09B92;margin-top:9px;padding-top:7px;border-top:1px dashed #E0DDD7;display:flex;justify-content:space-between">'+
-        '<span>📝 Entry by: <strong style="color:#6A655C">'+r.enteredBy+'</strong></span>'+
+        '<span>📝 Entry by: <strong style="color:#6A655C">'+entryByName(r)+'</strong></span>'+
         '<span>'+fmDate(r.createdAt)+'</span>'+
       '</div>'+
     '</div>';
