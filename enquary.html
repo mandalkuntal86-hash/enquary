@@ -685,6 +685,7 @@ function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 function fmDate(ts){return new Date(ts).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});}
 function isAdmin(){return CU&&CU.role==='Admin';}
 function entryByName(r){return r.enteredBy;}
+function serviceCategoryOf(r){return(r.jobCard&&r.jobCard.serviceCategory)||(['CCTV SERVICE','NEW INSTALL','OTHERS'].includes(r.prod)?r.prod:'');}
 function show(dId,oId){document.getElementById(dId).classList.add('open');document.getElementById(oId).classList.add('open');}
 function hide(dId,oId){document.getElementById(dId).classList.remove('open');document.getElementById(oId).classList.remove('open');}
 
@@ -875,6 +876,7 @@ function saveJobCard(){
   var needsBilling=serviceType!=='NEW INSTALL';
   r.name=customerName;
   r.jobCard={jobNo:jobField('jc-jobno'),date:jobField('jc-date'),entryBy:r.enteredBy||jobField('jc-entryby'),serviceCategory:serviceType,address:jobField('jc-address'),technician:technicianName,brand:jobField('jc-brand'),model:jobField('jc-model'),serial:jobField('jc-serial'),complaint:jobField('jc-complaint'),action:jobField('jc-action'),parts:jobField('jc-parts'),remarks:jobField('jc-remarks'),serviceCharge:needsBilling?jobField('jc-service'):'',partsAmount:needsBilling?jobField('jc-partsamt'):'',total:needsBilling?jobField('jc-total'):'',updatedAt:Date.now()};
+  r.st='Closed';r.closeDesc='Service job card completed';r.closedBy=technicianName;r.closeDate=Date.now();
   r.jobCard.updatedBy=CU?CU.name:'';
   setJobSaveMessage('Job card saved.',false);
   var saveRequest=fbSaveRecord(r);
@@ -960,7 +962,7 @@ function render(){
            (!fq||r.qt===fq)&&(!fs||r.st===fs)&&(!fp||r.prod===fp)&&
            (!JOB_DONE_FILTER||(r.qt==='Service'&&!!r.jobCard))&&
            (!JOB_STATUS_FILTER||(r.st===(JOB_STATUS_FILTER==='complete'?'Closed':'Pending')))&&
-           (!JOB_CATEGORY_FILTER||((r.jobCard&&r.jobCard.serviceCategory)||r.prod)===JOB_CATEGORY_FILTER)&&
+           (!JOB_CATEGORY_FILTER||serviceCategoryOf(r)===JOB_CATEGORY_FILTER)&&
            (!fromMs||d>=fromMs)&&(!toMs||d<=toMs);
   });
   updStats(F);
@@ -1385,11 +1387,13 @@ function setQF(v){
 function setJobStatus(v){
   JOB_DONE_FILTER=true;
   JOB_STATUS_FILTER=v;
+  document.getElementById('f-pr').value='';
   render();
 }
 function setJobCategory(v){
   JOB_DONE_FILTER=true;
   JOB_CATEGORY_FILTER=v;
+  document.getElementById('f-pr').value='';
   render();
 }
 function clearF(){
