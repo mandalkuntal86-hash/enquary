@@ -448,6 +448,11 @@ body{font-family:'DM Sans',sans-serif;background:linear-gradient(180deg,#f5f1eb 
         <button class="qf-pill"        id="qf-closed"  onclick="setQF('closed')">&#10003; Closed</button>
         <button class="qf-pill"        id="qf-sales"   onclick="setQF('sales')">&#128200; Sales</button>
         <button class="qf-pill"        id="qf-service" onclick="setQF('service')">&#128295; Service</button>
+        <button class="qf-pill"        id="qf-jobdone" onclick="setQF('jobdone')">&#129534; Job Card Done</button>
+      </div>
+      <div id="job-status-filters" style="display:none;gap:6px;flex-wrap:wrap;padding-bottom:2px">
+        <button class="qf-pill" id="qf-job-complete" onclick="setJobStatus('complete')">&#10003; Complete</button>
+        <button class="qf-pill" id="qf-job-pending" onclick="setJobStatus('pending')">&#9200; Pending</button>
       </div>
       <div class="filter-row">
         <select id="f-qt" onchange="render()"><option value="">All Types</option><option value="Sales">📈 Sales</option><option value="Service">🔧 Service</option></select>
@@ -581,6 +586,15 @@ body{font-family:'DM Sans',sans-serif;background:linear-gradient(180deg,#f5f1eb 
       <button type="button" class="pick-btn" id="b-service" onclick="pickQt('Service')">🔧 Service</button>
     </div>
   </div>
+  <div class="field" id="service-type-wrap" style="display:none">
+    <label>Service Category <span class="req">*</span></label>
+    <select id="m-service-type">
+      <option value="">Select service category</option>
+      <option value="CCTV SERVICE">CCTV SERVICE</option>
+      <option value="NEW INSTALL">NEW INSTALL</option>
+      <option value="OTHERS">OTHERS</option>
+    </select>
+  </div>
   <div class="field"><label>Customer Name <span class="req">*</span></label><input id="m-name" type="text" placeholder="e.g. Ravi Kumar"/></div>
   <div class="field">
     <label>Mobile Number <span class="req">*</span></label>
@@ -648,6 +662,8 @@ var CU=null; // current user
 var CQ_ID=null;
 var EDIT_ID=null;
 var QT='';
+var JOB_DONE_FILTER=false;
+var JOB_STATUS_FILTER='';
 var FEEDBACK_ID=null;
 var FEEDBACK_RATING=0;
 var CM={},CI=0;
@@ -898,13 +914,18 @@ function render(){
   var fq=document.getElementById('f-qt').value;
   var fs=document.getElementById('f-st').value;
   var fp=document.getElementById('f-pr').value;
+  if(fq||fs){JOB_DONE_FILTER=false;JOB_STATUS_FILTER='';}
   // sync pill active to current dropdown state
   var activeQF='all';
-  if(fs==='Pending'&&!fq)activeQF='pending';
+  if(JOB_DONE_FILTER)activeQF='jobdone';
+  else if(fs==='Pending'&&!fq)activeQF='pending';
   else if(fs==='Closed'&&!fq)activeQF='closed';
   else if(fq==='Sales'&&!fs)activeQF='sales';
   else if(fq==='Service'&&!fs)activeQF='service';
-  ['all','pending','closed','sales','service'].forEach(function(k){var el=document.getElementById('qf-'+k);if(el)el.classList.toggle('active',k===activeQF);});
+  ['all','pending','closed','sales','service','jobdone'].forEach(function(k){var el=document.getElementById('qf-'+k);if(el)el.classList.toggle('active',k===activeQF);});
+  var jobStatusFilters=document.getElementById('job-status-filters');
+  if(jobStatusFilters)jobStatusFilters.style.display=JOB_DONE_FILTER?'flex':'none';
+  ['complete','pending'].forEach(function(k){var el=document.getElementById('qf-job-'+k);if(el)el.classList.toggle('active',JOB_STATUS_FILTER===k);});
   var fdFrom=document.getElementById('f-date-from').value;
   var fdTo=document.getElementById('f-date-to').value;
   var fromMs=fdFrom?new Date(fdFrom).setHours(0,0,0,0):null;
@@ -913,6 +934,8 @@ function render(){
     var d=r.createdAt;
     return(!q||r.name.toLowerCase().includes(q)||r.prod.toLowerCase().includes(q)||r.mob.includes(q))&&
            (!fq||r.qt===fq)&&(!fs||r.st===fs)&&(!fp||r.prod===fp)&&
+           (!JOB_DONE_FILTER||(r.qt==='Service'&&!!r.jobCard))&&
+           (!JOB_STATUS_FILTER||(r.st===(JOB_STATUS_FILTER==='complete'?'Closed':'Pending')))&&
            (!fromMs||d>=fromMs)&&(!toMs||d<=toMs);
   });
   updStats(F);
@@ -1096,6 +1119,7 @@ function pickQt(v){
   QT=v;
   document.getElementById('b-sales').className='pick-btn'+(v==='Sales'?' sel-sales':'');
   document.getElementById('b-service').className='pick-btn'+(v==='Service'?' sel-service':'');
+  document.getElementById('service-type-wrap').style.display=v==='Service'?'block':'none';
   document.getElementById('m-prod-label').innerHTML=v==='Service'?'Complaint / Issue Reported <span class="req">*</span>':'Product Name <span class="req">*</span>';
   document.getElementById('m-prod').placeholder=v==='Service'?'e.g. Camera not working, laptop repair required':'e.g. Rice 5kg';
 }
@@ -1104,11 +1128,12 @@ function openD(){
   document.getElementById('dr-title').textContent='Add Customer Query';
   document.getElementById('dr-save-btn').textContent='Save Record';
   document.getElementById('dr-enteredby').textContent=CU?CU.name:'—';
-  ['m-name','m-mob','m-prod','m-desc'].forEach(function(id){document.getElementById(id).value='';});
+  ['m-name','m-mob','m-prod','m-desc','m-service-type'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('m-customer-match').textContent='';
   document.getElementById('m-err').textContent='';
   document.getElementById('b-sales').className='pick-btn';
   document.getElementById('b-service').className='pick-btn';
+  document.getElementById('service-type-wrap').style.display='none';
   show('dr','ov1');
   setTimeout(function(){document.getElementById('m-name').focus();},320);
 }
@@ -1124,6 +1149,7 @@ function openEdit(id){
   document.getElementById('m-mob').value=r.mob;
   lookupCustomerByMobile();
   document.getElementById('m-prod').value=r.qt==='Service'?(r.qdesc||r.prod):r.prod;
+  document.getElementById('m-service-type').value=['CCTV SERVICE','NEW INSTALL','OTHERS'].includes(r.prod)?r.prod:'';
   document.getElementById('m-desc').value=r.qdesc||'';
   document.getElementById('m-err').textContent='';
   document.getElementById('b-sales').className='pick-btn'+(r.qt==='Sales'?' sel-sales':'');
@@ -1137,6 +1163,7 @@ function saveR(){
   var name=document.getElementById('m-name').value.trim();
   var mob=document.getElementById('m-mob').value.trim();
   var enteredValue=document.getElementById('m-prod').value.trim();
+  var serviceType=document.getElementById('m-service-type').value;
   var prod=enteredValue;
   var qdesc=document.getElementById('m-desc').value.trim();
   var err=document.getElementById('m-err');
@@ -1144,7 +1171,10 @@ function saveR(){
   if(!name){err.textContent='Customer name is required.';return;}
   if(!mob||!/^\d{7,15}$/.test(mob.replace(/[\s\-+()]/g,''))){err.textContent='Enter a valid mobile number.';return;}
   if(!enteredValue){err.textContent=QT==='Service'?'Complaint / Issue Reported is required.':'Product name is required.';return;}
-  if(QT==='Service'){prod='Service Call';qdesc=enteredValue+(qdesc?'\n'+qdesc:'');}
+  if(QT==='Service'){
+    if(!serviceType){err.textContent='Please select a service category.';return;}
+    prod=serviceType;qdesc=enteredValue+(qdesc?'\n'+qdesc:'');
+  }
   err.textContent='';
   var createdServiceId=null;
   if(EDIT_ID!==null){
@@ -1308,8 +1338,10 @@ document.addEventListener('click',function(e){
 //  MISC
 // ══════════════════════════════════════════════
 function setQF(v){
+  JOB_DONE_FILTER=v==='jobdone';
+  if(v!=='jobdone')JOB_STATUS_FILTER='';
   // update pill active state
-  ['all','pending','closed','sales','service'].forEach(function(k){
+  ['all','pending','closed','sales','service','jobdone'].forEach(function(k){
     var el=document.getElementById('qf-'+k);
     if(el) el.classList.toggle('active',k===v);
   });
@@ -1323,10 +1355,17 @@ function setQF(v){
   else{stSel.value='';qtSel.value='';}
   render();
 }
+function setJobStatus(v){
+  JOB_DONE_FILTER=true;
+  JOB_STATUS_FILTER=v;
+  render();
+}
 function clearF(){
+  JOB_DONE_FILTER=false;
+  JOB_STATUS_FILTER='';
   document.getElementById('search').value='';
   ['f-qt','f-st','f-pr','f-date-from','f-date-to'].forEach(function(id){document.getElementById(id).value='';});
-  ['all','pending','closed','sales','service'].forEach(function(k){var el=document.getElementById('qf-'+k);if(el)el.classList.toggle('active',k==='all');});
+  ['all','pending','closed','sales','service','jobdone'].forEach(function(k){var el=document.getElementById('qf-'+k);if(el)el.classList.toggle('active',k==='all');});
   render();
 }
 
