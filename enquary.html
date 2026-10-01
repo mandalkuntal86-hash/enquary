@@ -1011,9 +1011,11 @@ function updStats(records){
   try{updQuoteStats();}catch(e){}
   document.getElementById('s-revenue').textContent='₹'+revenue.toLocaleString('en-IN',{maximumFractionDigits:2});
 }
+function displayProd(r){return (isServiceRecord(r)&&serviceCategoryOf(r))||r.prod;}
 function updPF(){
   var sel=document.getElementById('f-pr'),val=sel.value;
-  var pr=Array.from(new Set(RECORDS.map(function(r){return r.prod;}))).sort();
+  var pr=Array.from(new Set(['NEW INSTALL','CCTV SERVICE'].concat(RECORDS.map(function(r){return displayProd(r);})))).filter(Boolean);
+  var pin=['NEW INSTALL','CCTV SERVICE'];pr=pin.concat(pr.filter(function(x){return pin.indexOf(x)<0;}).sort());
   sel.innerHTML='<option value="">All Products</option>'+pr.map(function(p){return'<option value="'+esc(p)+'"'+(val===p?' selected':'')+'>'+esc(p)+'</option>';}).join('');
   document.getElementById('pdl').innerHTML=pr.map(function(p){return'<option value="'+esc(p)+'">';}).join('');
 }
@@ -1047,7 +1049,7 @@ function render(){
     var byClose=(fs==='Closed'||JOB_STATUS_FILTER==='complete');
     var d=byClose?(r.closeDate||r.createdAt):r.createdAt;
     return(!q||r.name.toLowerCase().includes(q)||r.prod.toLowerCase().includes(q)||r.mob.includes(q))&&
-           (!fq||r.qt===fq)&&(!fs||r.st===fs)&&(!fp||r.prod===fp)&&
+           (!fq||r.qt===fq)&&(!fs||r.st===fs)&&(!fp||displayProd(r)===fp)&&
            (!JOB_DONE_FILTER||isServiceRecord(r))&&
            (!JOB_STATUS_FILTER||(r.st===(JOB_STATUS_FILTER==='complete'?'Closed':'Pending')))&&
            (!JOB_CATEGORY_FILTER||serviceCategoryOf(r)===JOB_CATEGORY_FILTER)&&
@@ -1070,7 +1072,7 @@ function render(){
       ?'<button class="bc bc-amber" onclick="openRD('+r.id+')">&#8617; Reopen</button>'
       :'<button class="bc bc-green" onclick="openCQ('+r.id+')">&#10003; Close</button>';
     var jobCardBtn=(!VIEW_ONLY&&r.qt==='Service')?'<button class="bc bc-green" onclick="openExistingJobCard('+r.id+')">🧾 Job Card</button>':'';
-    var quoteBtn=(!VIEW_ONLY&&!r.quoteId&&String(r.prod||'').trim().toUpperCase()==='NEW INSTALL')?'<button class="bc bc-green" onclick="createQuoteForRecord('+r.id+')" title="Open CCTV Quotation with this customer filled in">🎥 Quote</button>':'';
+    var quoteBtn=(!VIEW_ONLY&&!r.quoteId&&((isServiceRecord(r)&&serviceCategoryOf(r))||String(r.prod||'').trim().toUpperCase())==='NEW INSTALL')?'<button class="bc bc-green" onclick="createQuoteForRecord('+r.id+')" title="Open CCTV Quotation with this customer filled in">🎥 Quote</button>':'';
     var editBtn=(!VIEW_ONLY&&isAdmin())?'<button class="bci bci-edit" onclick="openEdit('+r.id+')" title="Edit"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>':'';
     var delBtn=(!VIEW_ONLY&&isAdmin())?'<button class="bci bci-del" onclick="delR('+r.id+')" title="Delete"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>':'';
     return'<div class="record-card'+(isClosed?' is-closed':'')+'">'+
@@ -1087,7 +1089,7 @@ function render(){
       '<div class="rc-row"><span class="rk">Query</span>'+qtB+'</div>'+
       '<div class="rc-row"><span class="rk">Status</span>'+stB+'</div>'+
       (r.quoteId?'<div class="rc-row"><span class="rk">Quotation</span><span style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;justify-content:flex-end"><span class="badge b-blue" style="cursor:pointer" data-q="'+esc(r.quoteId)+'" onclick="openQuoteFromQuery(this.dataset.q)" title="Open this quotation">#'+esc(r.quoteId)+(r.quoteTotal?' · ₹'+Number(r.quoteTotal).toLocaleString('en-IN'):'')+'</span><span class="badge b-green">✓ Matured'+(r.quoteMaturedAt?' '+new Date(r.quoteMaturedAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short'}):'')+'</span>'+(isAdmin()&&!VIEW_ONLY?'<a href="#" style="font-size:10.5px;color:#7a2d1c" onclick="undoQuoteMature('+r.id+');return false">undo</a>':'')+'</span></div>':'')+
-      '<div class="rc-row"><span class="rk">Product</span><span class="badge '+gc(r.prod)+'">'+esc(r.prod)+'</span></div>'+
+      '<div class="rc-row"><span class="rk">Product</span><span class="badge '+gc(r.prod)+'">'+esc((isServiceRecord(r)&&serviceCategoryOf(r))||r.prod)+'</span></div>'+
       (r.qdesc?'<div class="rc-row"><span class="rk">Note</span><span class="rv" style="font-size:12px;color:var(--text2)">'+esc(r.qdesc)+'</span></div>':'')+
       noteBlock+
       '<div class="entry-meta"><span>📝 Entry by: <strong>'+esc(entryByName(r))+'</strong></span><span>'+fmDate(r.createdAt)+'</span></div>'+
