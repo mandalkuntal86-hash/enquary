@@ -514,7 +514,7 @@ body{font-family:'DM Sans',sans-serif;background:linear-gradient(180deg,#f5f1eb 
           <div class="field"><label>Total Amount (₹)</label><input id="jc-total" type="number" readonly/></div>
         </div></div>
         <div id="job-feedback"></div>
-        <div class="job-actions"><button class="btn-p btn-save" id="job-save-btn" onclick="saveJobCard()">Save Job Card</button><button class="btn-p" style="background:#25D366;color:#fff" onclick="sendJobCard()">PDF + WhatsApp</button><div class="job-save-msg" id="job-save-msg" aria-live="polite"></div></div>
+        <div class="job-actions"><button class="btn-p btn-save" id="job-save-btn" onclick="saveJobCard()">Save Job Card</button><button class="btn-p" style="background:#25D366;color:#fff" onclick="sendJobCard()">PDF + WhatsApp</button><button class="btn-p" style="background:#128C7E;color:#fff" onclick="sendFeedbackLink()">WhatsApp Feedback Link</button><div class="job-save-msg" id="job-save-msg" aria-live="polite"></div></div>
       </div>
     </div>
   </div>
@@ -906,7 +906,36 @@ function saveJobCard(){
   switchTab('queries');
   return r;
 }
-function feedbackUrl(id){return window.location.href.split('?')[0]+'?feedback='+encodeURIComponent(id);}
+function feedbackUrl(id){return window.location.origin+window.location.pathname+'?feedback='+encodeURIComponent(id);}
+function waPhone(mob){
+  var d=normalizeMobile(mob).replace(/^0+/,'');
+  if(d.length===10)d='91'+d; /* Indian number without country code: wa.me needs it */
+  return d;
+}
+function feedbackText(r){return 'Dear '+r.name+', thank you for choosing Eldorado. Please share your feedback for service job '+((r.jobCard&&r.jobCard.jobNo)||'')+' here: '+feedbackUrl(r.id);}
+function openWhatsAppFeedback(r){
+  var phone=waPhone(r.mob);
+  if(!phone){setJobSaveMessage('Customer mobile number is missing.',true);return;}
+  var url='https://wa.me/'+phone+'?text='+encodeURIComponent(feedbackText(r));
+  var w=window.open(url,'_blank');
+  if(!w)window.location.href=url;
+}
+function sendFeedbackLink(){
+  var id=Number(document.getElementById('job-record').value),r=RECORDS.find(function(x){return x.id===id;});
+  if(!r){setJobSaveMessage('Select a service job first.',true);return;}
+  openWhatsAppFeedback(r);
+}
+function showFeedbackPrompt(r){
+  var old=document.getElementById('fb-prompt');if(old)old.remove();
+  var d=document.createElement('div');d.id='fb-prompt';
+  d.style.cssText='position:fixed;left:12px;right:12px;bottom:16px;z-index:99999;background:#fff;border:1px solid #cfe4d5;border-radius:14px;padding:14px;box-shadow:0 8px 30px rgba(0,0,0,.25);font-family:inherit';
+  d.innerHTML='<div style="font-size:13px;margin-bottom:10px;color:#1b4332"><b>Job card shared.</b> Now send the feedback link to the customer.</div>'+
+    '<div style="display:flex;gap:8px"><button id="fb-send" style="flex:1;padding:12px;border:none;border-radius:10px;background:#128C7E;color:#fff;font-weight:700;font-size:14px">Send Feedback Link</button>'+
+    '<button id="fb-close" style="padding:12px 16px;border:1px solid #ddd;border-radius:10px;background:#fff;font-size:14px">Close</button></div>';
+  document.body.appendChild(d);
+  document.getElementById('fb-send').onclick=function(){d.remove();openWhatsAppFeedback(r);};
+  document.getElementById('fb-close').onclick=function(){d.remove();};
+}
 function renderJobFeedback(r){
   var f=r.feedback;if(!f){document.getElementById('job-feedback').innerHTML='<div class="feedback-box"><strong>Customer feedback</strong><div style="font-size:12px;color:var(--text2);margin-top:4px">Send the card to invite the customer to rate the service.</div></div>';return;}
   document.getElementById('job-feedback').innerHTML='<div class="feedback-box"><strong>Customer feedback received</strong><div class="feedback-rating">'+('★'.repeat(Number(f.rating)||0))+'<span style="color:#d9d5cd">'+('★'.repeat(5-(Number(f.rating)||0)))+'</span></div><div style="font-size:12px;color:var(--text2)">'+esc(f.comment||'No comment')+' · '+fmDate(f.submittedAt)+'</div></div>';
@@ -922,15 +951,22 @@ function jobPdf(r){
   if((j.serviceCategory||r.prod)!=='NEW INSTALL'){
     doc.setDrawColor(220,217,210);doc.line(14,y,196,y);y+=9;doc.setFontSize(10);doc.setTextColor(100,95,88);doc.text('Service Charge',120,y);doc.text('Rs. '+(j.serviceCharge||'0'),196,y,{align:'right'});y+=7;doc.text('Parts Amount',120,y);doc.text('Rs. '+(j.partsAmount||'0'),196,y,{align:'right'});y+=8;doc.setTextColor(27,67,50);doc.setFontSize(12);doc.text('TOTAL AMOUNT',120,y);doc.text('Rs. '+(j.total||'0.00'),196,y,{align:'right'});y+=15;
   }
-  doc.setFontSize(9);doc.setTextColor(100,95,88);doc.text('Thank you for trusting Eldorado. Your feedback helps us improve.',14,y);y+=6;doc.setTextColor(27,67,50);doc.text('Feedback: '+feedbackUrl(r.id),14,y);return doc;
+  doc.setFontSize(9);doc.setTextColor(100,95,88);doc.text('Thank you for trusting Eldorado. Your feedback helps us improve.',14,y);y+=6;doc.setTextColor(27,67,50);doc.textWithLink('Feedback: '+feedbackUrl(r.id),14,y,{url:feedbackUrl(r.id)});return doc;
 }
 function sendJobCard(){
   var id=Number(document.getElementById('job-record').value),existing=RECORDS.find(function(x){return x.id===id;}),r=existing&&existing.jobCard?existing:saveJobCard();
   if(!r)return;
-  if(!r)return;var doc=jobPdf(r);if(!doc)return;
-  var blob=doc.output('blob'),file=new File([blob],'service-job-card-'+(r.jobCard.jobNo||r.id)+'.pdf',{type:'application/pdf'}),text='Dear '+r.name+', your Eldorado service job card is attached. Please share your feedback here: '+feedbackUrl(r.id);
-  if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){navigator.share({files:[file],title:'Eldorado Service Job Card',text:text}).catch(function(){});return;}
-  doc.save('service-job-card-'+(r.jobCard.jobNo||r.id)+'.pdf');window.open('https://web.whatsapp.com/send?phone='+encodeURIComponent(r.mob.replace(/\D/g,''))+'&text='+encodeURIComponent(text),'_blank');
+  var doc=jobPdf(r);if(!doc)return;
+  var fname='service-job-card-'+(r.jobCard.jobNo||r.id)+'.pdf';
+  var blob=doc.output('blob'),file=new File([blob],fname,{type:'application/pdf'});
+  /* Android WhatsApp drops the text when a file is shared, so share the PDF alone
+     and then offer a separate button to send the feedback link as a normal chat message. */
+  if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+    navigator.share({files:[file],title:'Eldorado Service Job Card'}).then(function(){showFeedbackPrompt(r);}).catch(function(){});
+    return;
+  }
+  doc.save(fname);
+  showFeedbackPrompt(r);
 }
 
 // ══════════════════════════════════════════════
