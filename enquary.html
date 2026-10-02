@@ -802,6 +802,33 @@ function doLogin(){
   var p=document.getElementById('lg-pass').value;
   var emp=EMPLOYEES.find(function(e){return e.username===u&&e.password===p;});
   if(!emp){document.getElementById('lg-err').textContent='Invalid username or password.';return;}
+  saveSession(emp);
+  enterApp(emp);
+}
+// ── Persistent login: remember the user (id + username only, never the password) until Logout ──
+var SESSION_KEY='cctv_session_v1';
+function saveSession(emp){try{localStorage.setItem(SESSION_KEY,JSON.stringify({id:emp.id,username:emp.username}));}catch(e){}}
+function clearSession(){try{localStorage.removeItem(SESSION_KEY);}catch(e){}}
+function tryRestoreSession(){
+  if(CU||VIEW_ONLY||FEEDBACK_ID)return;
+  var s=null;try{s=JSON.parse(localStorage.getItem(SESSION_KEY)||'null');}catch(e){}
+  if(!s)return;
+  var emp=EMPLOYEES.find(function(e){return e.id===s.id&&e.username===s.username;});
+  if(emp)enterApp(emp);
+}
+function syncSessionUser(){
+  if(!CU){tryRestoreSession();return;}
+  var f=EMPLOYEES.find(function(e){return e.id===CU.id;});
+  if(!f){alert('Your account was removed. Please contact the admin.');doLogout();return;}
+  if(f.role!==CU.role||f.name!==CU.name){
+    CU=f;
+    document.getElementById('tb-user-name').textContent='Welcome, '+CU.name;
+    document.getElementById('tb-role-badge').textContent=CU.role;
+    document.getElementById('tb-role-badge').className='tb-pill '+rolePillClass();
+    applyRevenueVisibility();switchTab('queries');render();updStats();
+  }
+}
+function enterApp(emp){
   CU=emp;
   document.getElementById('login-screen').classList.remove('active');
   document.getElementById('app-screen').classList.add('active');
@@ -817,9 +844,11 @@ function doLogin(){
   if(fbb&&isAdmin())fbb.style.display='flex';
 }
 function doLogout(){
+  clearSession();
   resetToLoginState();
 }
 function backToLogin(){
+  clearSession();
   resetToLoginState();
 }
 function doViewOnly(){
@@ -849,7 +878,7 @@ window.addEventListener('DOMContentLoaded', function(){
     document.getElementById('login-screen').classList.remove('active');
     document.getElementById('app-screen').classList.remove('active');
     document.getElementById('feedback-screen').style.display='flex';
-  }
+  }else{tryRestoreSession();}
 });
 document.getElementById('lg-pass').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
 document.querySelectorAll('#rating-pick button').forEach(function(btn){btn.addEventListener('click',function(){FEEDBACK_RATING=Number(btn.dataset.rating);document.querySelectorAll('#rating-pick button').forEach(function(item){item.classList.toggle('selected',Number(item.dataset.rating)<=FEEDBACK_RATING);});});});
@@ -1747,6 +1776,7 @@ function initFirebase() {
       var others = loaded.filter(function(e){return e.username!=='mandalkuntal';});
       EMPLOYEES = admin ? [admin].concat(others) : loaded;
       renderEmpList();
+      syncSessionUser();
       if (document.getElementById('emp-tab').style.display !== 'none') renderEmpUI();
     });
 
