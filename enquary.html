@@ -237,6 +237,15 @@ body{font-family:'DM Sans',sans-serif;background:linear-gradient(180deg,#f5f1eb 
 .asg-block{margin:12px 0 4px}
 .emp-del{width:28px;height:28px;border-radius:7px;border:1px solid var(--border);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text3);flex-shrink:0}
 .emp-del:active{background:var(--danger-lt);color:var(--danger)}
+.emp-item.inactive{opacity:.62;background:var(--surface2)}
+.emp-status{font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;margin-left:6px;vertical-align:middle}
+.emp-status.on{background:var(--closed-lt);color:var(--closed-tx)}
+.emp-status.off{background:var(--danger-lt);color:var(--danger)}
+.emp-pw{font-size:11px;color:var(--text2);margin-top:3px;font-family:'DM Mono',monospace;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.emp-pw button{font-family:inherit;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--accent);cursor:pointer}
+.emp-toggle{font-family:inherit;font-size:12px;font-weight:700;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer;flex-shrink:0}
+.emp-toggle.deact{color:var(--danger)}
+.emp-toggle.act{color:var(--closed)}
 .emp-del svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
 .add-emp-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px}
 .add-emp-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:14px}
@@ -427,12 +436,6 @@ body{font-family:'DM Sans',sans-serif;background:linear-gradient(180deg,#f5f1eb 
       <div class="lg-err" id="lg-err"></div>
       <button class="lg-btn" onclick="doLogin()">Login</button>
       <div class="lg-err" id="lg-err2" style="display:none"></div>
-      <div class="lg-divider"><span>or</span></div>
-      <button class="lg-view-btn" onclick="doViewOnly()">
-        <svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        View Only (No Login)
-      </button>
-      <div class="lg-hint">Read-only access &middot; Cannot add or edit records</div>
     </div>
   </div>
 </div>
@@ -837,11 +840,13 @@ function resetToLoginState(){
   applyRevenueVisibility();
   if(document.getElementById('fab-add'))document.getElementById('fab-add').style.display='flex';
 }
+function isActive(e){return !!e&&e.active!==false;} // old accounts without the field count as Active
 function doLogin(){
   var u=document.getElementById('lg-user').value.trim();
   var p=document.getElementById('lg-pass').value;
   var emp=EMPLOYEES.find(function(e){return e.username===u&&e.password===p;});
   if(!emp){document.getElementById('lg-err').textContent='Invalid username or password.';return;}
+  if(!isActive(emp)){document.getElementById('lg-err').textContent='Your account is inactive. Please contact the admin.';return;}
   saveSession(emp);
   enterApp(emp);
 }
@@ -854,12 +859,14 @@ function tryRestoreSession(){
   var s=null;try{s=JSON.parse(localStorage.getItem(SESSION_KEY)||'null');}catch(e){}
   if(!s)return;
   var emp=EMPLOYEES.find(function(e){return e.id===s.id&&e.username===s.username;});
-  if(emp)enterApp(emp);
+  if(emp&&isActive(emp))enterApp(emp);
+  else if(emp)clearSession();
 }
 function syncSessionUser(){
   if(!CU){tryRestoreSession();return;}
   var f=EMPLOYEES.find(function(e){return e.id===CU.id;});
   if(!f){alert('Your account was removed. Please contact the admin.');doLogout();return;}
+  if(!isActive(f)){alert('Your account has been made inactive by the admin. You have been logged out.');doLogout();return;}
   if(f.role!==CU.role||f.name!==CU.name){
     CU=f;
     document.getElementById('tb-user-name').textContent='Welcome, '+CU.name;
@@ -891,7 +898,8 @@ function backToLogin(){
   clearSession();
   resetToLoginState();
 }
-function doViewOnly(){
+function doViewOnly(){return; // View Only login removed
+
   CU=null;
   VIEW_ONLY=true;
   document.getElementById('login-screen').classList.remove('active');
@@ -1536,7 +1544,7 @@ function openAssign(id){
   var form=document.getElementById('ad-form');form.style.display=editable?'block':'none';
   if(editable){
     var sel=document.getElementById('ad-emp');
-    var techs=EMPLOYEES.filter(function(e){return e.role==='Technician';});
+    var techs=EMPLOYEES.filter(function(e){return e.role==='Technician'&&isActive(e);});
     sel.innerHTML=(techs.length?'<option value="">Select technician…</option>':'<option value="">No technician available</option>')+techs.map(function(e){return'<option value="'+e.id+'">'+esc(e.name)+'</option>';}).join('');
     document.getElementById('ad-save').disabled=!techs.length;
     sel.value=cur?String(cur.empId):'';
@@ -1559,7 +1567,7 @@ function saveAssign(){
   var reason=document.getElementById('ad-reason').value.trim();
   var note=document.getElementById('ad-note').value.trim();
   var emp=EMPLOYEES.find(function(e){return e.id===empId;});
-  if(!emp||emp.role!=='Technician'){err.textContent='Please select a technician.';return;}
+  if(!emp||emp.role!=='Technician'||!isActive(emp)){err.textContent='Please select an active technician.';return;}
   if(!date){err.textContent='Please choose the work date.';return;}
   var cur=curAsg(r);
   if(cur&&cur.empId===empId&&cur.date===date){err.textContent='Same technician and same date — change the technician or the date.';return;}
@@ -1699,14 +1707,16 @@ function renderEmpList(){
   el.innerHTML=EMPLOYEES.map(function(emp){
     var isMe=CU&&CU.id===emp.id;
     var avCls='emp-av'+(emp.role==='Admin'?' adm-av':(emp.role==='Owner'?' own-av':(emp.role==='Technician'?' tech-av':'')));
-    var delBtn=(isAdmin()&&!isMe)?'<button class="emp-del" onclick="delEmployee('+emp.id+')" title="Remove"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>':'';
+    var act=isActive(emp);
+    var delBtn=(isAdmin()&&!isMe&&emp.username!=='mandalkuntal')?'<button class="emp-toggle '+(act?'deact':'act')+'" onclick="toggleActive('+emp.id+')" title="'+(act?'Make inactive (cannot log in)':'Make active')+'">'+(act?'Deactivate':'Activate')+'</button>':'';
     var canChange=isAdmin()&&!isMe&&emp.username!=='mandalkuntal';
     var roleSel=canChange?'<select class="emp-role-sel" onchange="changeRole('+emp.id+',this.value)" title="Change role">'+['Employee','Technician','Owner','Admin'].map(function(r){return'<option value="'+r+'"'+(emp.role===r?' selected':'')+'>'+r+'</option>';}).join('')+'</select>':'';
-    return'<div class="emp-item">'+
+    return'<div class="emp-item'+(act?'':' inactive')+'">'+
       '<div class="'+avCls+'">'+esc(ini(emp.name))+'</div>'+
       '<div class="emp-info">'+
-        '<div class="emp-name">'+esc(emp.name)+(isMe?' <span style="font-size:10px;color:var(--accent);font-weight:700">(You)</span>':'')+'</div>'+
+        '<div class="emp-name">'+esc(emp.name)+(isMe?' <span style="font-size:10px;color:var(--accent);font-weight:700">(You)</span>':'')+'<span class="emp-status '+(act?'on':'off')+'">'+(act?'Active':'Inactive')+'</span></div>'+
         '<div class="emp-meta">@'+esc(emp.username)+' · '+esc(emp.role)+'</div>'+
+        (isAdmin()?'<div class="emp-pw">🔑 <span id="pw-'+emp.id+'">'+(PW_SHOWN[emp.id]?esc(emp.password||''):'••••••••')+'</span><button onclick="togglePw('+emp.id+')">'+(PW_SHOWN[emp.id]?'Hide':'Show')+'</button><button onclick="changePw('+emp.id+')">Change</button></div>':'')+
       '</div>'+
       roleSel+delBtn+
     '</div>';
@@ -1734,17 +1744,38 @@ function addEmployee(){
   if(EMPLOYEES.find(function(e){return e.username===user;})){err.textContent='Username already exists.';return;}
   if(!pass||pass.length<4){err.textContent='Password must be at least 4 characters.';return;}
   err.textContent='';
-  var newEmp={id:Date.now(),name:name,username:user,password:pass,role:role};
+  var newEmp={id:Date.now(),name:name,username:user,password:pass,role:role,active:true};
   EMPLOYEES.push(newEmp);
   fbSaveEmployee(newEmp);
   ['ne-name','ne-user','ne-pass'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('ne-role').value='Employee';
   renderEmpList();
 }
-function delEmployee(id){
-  if(!confirm('Remove this employee?'))return;
-  fbDeleteEmployee(id);
-  EMPLOYEES=EMPLOYEES.filter(function(e){return e.id!==id;});
+var PW_SHOWN={};
+function togglePw(id){PW_SHOWN[id]=!PW_SHOWN[id];renderEmpList();}
+function changePw(id){
+  if(!isAdmin()){alert('Only Admin can change passwords.');return;}
+  var emp=EMPLOYEES.find(function(e){return e.id===id;});if(!emp)return;
+  var np=prompt('New password for '+emp.name+' (@'+emp.username+')\nMinimum 4 characters:');
+  if(np===null)return;
+  np=np.trim();
+  if(np.length<4){alert('Password must be at least 4 characters.');return;}
+  emp.password=np;
+  fbSaveEmployee(emp);
+  PW_SHOWN[id]=true;
+  renderEmpList();
+  alert('Password updated for '+emp.name+'.');
+}
+function toggleActive(id){
+  if(!isAdmin()){alert('Only Admin can activate or deactivate accounts.');return;}
+  var emp=EMPLOYEES.find(function(e){return e.id===id;});
+  if(!emp||emp.username==='mandalkuntal'||(CU&&CU.id===id))return;
+  var act=isActive(emp);
+  var msg=act?'Make '+emp.name+' INACTIVE?\n\nThey will not be able to log in. All their previous work stays saved.'
+             :'Make '+emp.name+' ACTIVE again?\n\nThey will be able to log in.';
+  if(!confirm(msg))return;
+  emp.active=!act;
+  fbSaveEmployee(emp); // account is kept, never deleted, so all past records/assignments/history are preserved
   renderEmpList();
 }
 
@@ -1754,7 +1785,7 @@ function delEmployee(id){
 function showSug(inputId,listId){
   var val=(document.getElementById(inputId).value||'').toLowerCase();
   var list=document.getElementById(listId);
-  var names=EMPLOYEES.map(function(e){return e.name;});
+  var names=EMPLOYEES.filter(isActive).map(function(e){return e.name;});
   var filtered=val?names.filter(function(n){return n.toLowerCase().includes(val);}):names;
   if(!filtered.length){list.classList.remove('open');return;}
   list.innerHTML=filtered.map(function(n){
@@ -1905,6 +1936,8 @@ function initFirebase() {
       // Always keep admin account
       var admin = EMPLOYEES.find(function(e){return e.username==='mandalkuntal';});
       var others = loaded.filter(function(e){return e.username!=='mandalkuntal';});
+      var fbAdmin = loaded.find(function(e){return e.username==='mandalkuntal';});
+      if (admin && fbAdmin && fbAdmin.password) admin.password = fbAdmin.password;
       EMPLOYEES = admin ? [admin].concat(others) : loaded;
       renderEmpList();
       syncSessionUser();
