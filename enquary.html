@@ -782,7 +782,11 @@ body{overscroll-behavior-y:auto!important}
       <div class="err-msg" id="feedback-error"></div>
       <button class="btn-p btn-save" onclick="submitFeedback()">Submit Feedback</button>
     </div>
-    <div id="feedback-thanks" class="feedback-thanks" style="display:none"><div style="font-size:34px">✓</div><strong>Thank you for your feedback</strong><p>Your response has been saved with your service job.</p></div>
+    <div id="feedback-thanks" class="feedback-thanks" style="display:none"><div style="font-size:34px">✓</div><strong>Thank you for your feedback</strong><p>Your response has been saved with your service job.</p>
+      <div id="google-review-box" style="display:none;margin-top:14px">
+        <p style="margin-bottom:10px">Glad you had a good experience! Would you post this as a Google review too? It takes 10 seconds &mdash; your comment is copied, just paste it.</p>
+        <button type="button" class="btn-p btn-save" onclick="postGoogleReview()">⭐ Post on Google Review</button>
+      </div></div>
   </div>
 </div>
 
@@ -1117,6 +1121,20 @@ var TODAY_EMP='';
 var AD_ID=null;
 var FEEDBACK_ID=null;
 var FEEDBACK_RATING=0;
+var GOOGLE_REVIEW_URL='https://g.page/r/Cfg_RUQgE3TCEAE/review';
+function googleReviewReady(){return !!GOOGLE_REVIEW_URL;}
+function showGoogleReviewBox(r){
+  var b=document.getElementById('google-review-box');
+  if(b&&r&&r.feedback&&r.feedback.rating>=4&&googleReviewReady())b.style.display='block';
+}
+function postGoogleReview(){
+  var r=RECORDS.find(function(x){return x.id===FEEDBACK_ID;});
+  var c=(r&&r.feedback&&r.feedback.comment)||'';
+  function go(){window.open(GOOGLE_REVIEW_URL,'_blank');}
+  if(c&&navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(c).then(function(){alert('Your comment is copied. Paste it in the Google review box.');go();},go);}
+  else go();
+  if(r){r.feedback.googleClicked=Date.now();fbSaveRecord(r);}
+}
 var CM={},CI=0;
 var CC=['b-green','b-amber','b-blue','b-coral','b-purple'];
 
@@ -1266,14 +1284,14 @@ function renderFeedbackMode(){
   var r=RECORDS.find(function(x){return x.id===FEEDBACK_ID;});
   if(!r){document.getElementById('feedback-form').innerHTML='<div class="feedback-thanks"><strong>Job not found</strong><p>This feedback link is no longer available.</p></div>';return;}
   document.getElementById('feedback-title').textContent='How was your service, '+r.name+'?';
-  if(r.feedback){document.getElementById('feedback-form').style.display='none';document.getElementById('feedback-thanks').style.display='block';}
+  if(r.feedback){document.getElementById('feedback-form').style.display='none';document.getElementById('feedback-thanks').style.display='block';showGoogleReviewBox(r);}
 }
 function submitFeedback(){
   var r=RECORDS.find(function(x){return x.id===FEEDBACK_ID;});
   if(!r)return;
   if(!FEEDBACK_RATING){document.getElementById('feedback-error').textContent='Please choose a rating.';return;}
   r.feedback={rating:FEEDBACK_RATING,comment:document.getElementById('feedback-comment').value.trim(),submittedAt:Date.now()};
-  fbSaveRecord(r);document.getElementById('feedback-form').style.display='none';document.getElementById('feedback-thanks').style.display='block';
+  fbSaveRecord(r);document.getElementById('feedback-form').style.display='none';document.getElementById('feedback-thanks').style.display='block';showGoogleReviewBox(r);
 }
 
 // ══════════════════════════════════════════════
